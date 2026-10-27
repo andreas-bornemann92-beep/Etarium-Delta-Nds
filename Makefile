@@ -14,11 +14,12 @@ SOURCES := source
 INCLUDES := include
 
 ARCH := -mthumb -mthumb-interwork
-CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE)
+CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) -I$(LIBNDS)/include $(INCLUDE)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -g $(ARCH) -Wl,--gc-sections -specs=ds_arm9.specs
 LIBS := -lnds9
+LIBNDS ?= $(DEVKITPRO)/libnds
 LIBDIRS := $(LIBNDS)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
