@@ -1,6 +1,9 @@
-# Minimal Nintendo DS homebrew Makefile using devkitARM / libnds
+# Etarium Nintendo DS homebrew build (devkitPro / devkitARM / libnds)
+ifeq ($(strip $(DEVKITPRO)),)
+$(error DEVKITPRO is not set. Install devkitPro with devkitARM and libnds)
+endif
 ifeq ($(strip $(DEVKITARM)),)
-$(error DEVKITARM is not set. Install devkitPro devkitARM and libnds)
+$(error DEVKITARM is not set. Install devkitARM)
 endif
 
 include $(DEVKITARM)/ds_rules
@@ -11,7 +14,9 @@ SOURCES := source
 INCLUDES := include
 
 ARCH := -mthumb -mthumb-interwork
-CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE)
+CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE)
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+ASFLAGS := -g $(ARCH)
 LDFLAGS := -g $(ARCH) -Wl,--gc-sections -specs=ds_arm9.specs
 LIBS := -lnds9
 LIBDIRS := $(LIBNDS)
@@ -22,6 +27,7 @@ export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
 export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir))
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+export LIBS
 export OFILES := $(addprefix $(BUILD)/,$(notdir $(patsubst %.c,%.o,$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c)))))
 .PHONY: all clean
 all: $(BUILD)
