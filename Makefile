@@ -1,9 +1,9 @@
-# Etarium Nintendo DS homebrew build (devkitPro / devkitARM / libnds)
+# Etarium Nintendo DS build using devkitPro's libnds rules
 ifeq ($(strip $(DEVKITPRO)),)
-$(error DEVKITPRO is not set. Install devkitPro with devkitARM and libnds)
+$(error DEVKITPRO is not set)
 endif
 ifeq ($(strip $(DEVKITARM)),)
-$(error DEVKITARM is not set. Install devkitARM)
+$(error DEVKITARM is not set)
 endif
 
 include $(DEVKITARM)/ds_rules
@@ -29,18 +29,31 @@ export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir))
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 export LIBS
 export OFILES := $(addprefix $(BUILD)/,$(notdir $(patsubst %.c,%.o,$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c)))))
+
 .PHONY: all clean
 all: $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+
 $(BUILD):
 	@mkdir -p $@
+
 clean:
 	@rm -rf $(BUILD) $(TARGET).nds $(TARGET).elf
 else
 DEPENDS := $(OFILES:.o=.d)
 .PHONY: all
 all: $(OUTPUT).nds
+
 $(OUTPUT).nds: $(OUTPUT).elf
+
 $(OUTPUT).elf: $(OFILES)
+	@echo Linking $@
+	@$(CC) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+
+# Explicit source-to-object rule. The working directory is build/.
+%.o: %.c
+	@echo Compiling $<
+	@$(CC) $(CFLAGS) -MMD -MP -MF $(@:.o=.d) -c $< -o $@
+
 -include $(DEPENDS)
 endif
