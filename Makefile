@@ -13,14 +13,15 @@ BUILD := build
 SOURCES := source
 INCLUDES := include
 
-ARCH := -mthumb -mthumb-interwork
-CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) -I$(LIBNDS)/include $(INCLUDE)
+ARCH := -mthumb -mthumb-interwork -march=armv5te -mtune=arm946e-s
+PLATFORM := -DARM9
+CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(PLATFORM) -I$(LIBNDS)/include -I$(DEVKITPRO)/calico/include $(INCLUDE)
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -g $(ARCH) -Wl,--gc-sections -specs=ds_arm9.specs
-LIBS := -lnds9
+LIBS := -lnds9 -lcalico
 LIBNDS ?= $(DEVKITPRO)/libnds
-LIBDIRS := $(LIBNDS)
+LIBDIRS := $(LIBNDS) $(DEVKITPRO)/calico
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT := $(CURDIR)/$(TARGET)
