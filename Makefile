@@ -1,5 +1,6 @@
 # Etarium Nintendo DS / ARM9 - based on devkitPro's official DS template
 .SUFFIXES:
+.DEFAULT_GOAL := all
 
 ifeq ($(strip $(DEVKITARM)),)
 $(error DEVKITARM is not set)
@@ -12,7 +13,7 @@ BUILD := build
 SOURCES := source
 INCLUDES := include
 
-ARCH := -march=armv5te -mtune=arm946e-s -mthumb
+ARCH := -march=armv5te -mtune=arm946e-s
 CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
@@ -39,7 +40,7 @@ export OFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export INCLUDE := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) $(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: all clean
+.PHONY: all clean $(BUILD)
 all: $(BUILD)
 
 $(BUILD):
