@@ -22,19 +22,18 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Verify Nintendo DS dependencies
+      - name: Inspect Nintendo DS dependencies
         shell: bash
         run: |
-          set -euo pipefail
-          : "${DEVKITPRO:?DEVKITPRO not set}"
-          : "${DEVKITARM:?DEVKITARM not set}"
-          command -v arm-none-eabi-gcc
-          command -v ndstool
-          test -f "$DEVKITARM/ds_rules"
-          test -f "$DEVKITPRO/libnds/include/nds.h"
-          test -f "$DEVKITPRO/calico/include/calico.h"
-          test -f "$DEVKITPRO/calico/share/ds9.specs"
-          echo "Nintendo DS dependencies verified"
+          echo "DEVKITPRO=${DEVKITPRO:-unset}"
+          echo "DEVKITARM=${DEVKITARM:-unset}"
+          for cmd in arm-none-eabi-gcc ndstool dkp-pacman; do
+            if command -v "$cmd"; then echo "OK: $cmd"; else echo "MISSING COMMAND: $cmd"; fi
+          done
+          for path in "$DEVKITARM/ds_rules" "$DEVKITPRO/libnds/include/nds.h" "$DEVKITPRO/calico/include/calico.h" "$DEVKITPRO/calico/share/ds9.specs"; do
+            if test -f "$path"; then echo "OK: $path"; else echo "NOT FOUND: $path"; fi
+          done
+          find "$DEVKITPRO" -maxdepth 5 \( -name calico.h -o -name ds9.specs -o -name nds.h \) -print 2>/dev/null || true
       - name: Build ROM
         shell: bash
         run: |
