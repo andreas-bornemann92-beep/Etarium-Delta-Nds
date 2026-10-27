@@ -21,15 +21,20 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Verify toolchain
+      - name: Inspect toolchain
+        shell: bash
         run: |
-          test -n "$DEVKITPRO"
-          test -n "$DEVKITARM"
-          command -v arm-none-eabi-gcc
-          command -v ndstool
+          echo "DEVKITPRO=${DEVKITPRO:-unset}"
+          echo "DEVKITARM=${DEVKITARM:-unset}"
+          command -v arm-none-eabi-gcc || true
+          command -v ndstool || true
+          ls -la /opt/devkitpro || true
+          ls -la /opt/devkitpro/libnds || true
       - name: Build ROM
-        run: make
+        shell: bash
+        run: make --debug=b
       - name: Verify ROM output
+        shell: bash
         run: |
           test -s etarium.nds
           ls -lh etarium.nds
