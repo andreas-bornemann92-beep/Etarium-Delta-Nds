@@ -28,7 +28,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir))
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 export LIBS
-export OFILES := $(addprefix $(BUILD)/,$(notdir $(patsubst %.c,%.o,$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c)))))
+export OFILES := $(notdir $(patsubst %.c,%.o,$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))))
 
 .PHONY: all clean
 all: $(BUILD)
