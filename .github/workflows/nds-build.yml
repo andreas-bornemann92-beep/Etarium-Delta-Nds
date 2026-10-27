@@ -21,18 +21,25 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Inspect toolchain
+      - name: Verify Nintendo DS dependencies
         shell: bash
         run: |
-          echo "DEVKITPRO=${DEVKITPRO:-unset}"
-          echo "DEVKITARM=${DEVKITARM:-unset}"
-          command -v arm-none-eabi-gcc || true
-          command -v ndstool || true
-          ls -la /opt/devkitpro || true
-          ls -la /opt/devkitpro/libnds || true
+          set -euo pipefail
+          : "${DEVKITPRO:?DEVKITPRO not set}"
+          : "${DEVKITARM:?DEVKITARM not set}"
+          command -v arm-none-eabi-gcc
+          command -v ndstool
+          test -f "$DEVKITARM/ds_rules"
+          test -f "$DEVKITPRO/libnds/include/nds.h"
+          test -f "$DEVKITPRO/calico/include/calico.h"
+          test -f "$DEVKITPRO/calico/share/ds9.specs"
+          echo "Nintendo DS dependencies verified"
       - name: Build ROM
         shell: bash
-        run: make --debug=b
+        run: |
+          set -euo pipefail
+          make clean
+          make --no-print-directory
       - name: Verify ROM output
         shell: bash
         run: |
