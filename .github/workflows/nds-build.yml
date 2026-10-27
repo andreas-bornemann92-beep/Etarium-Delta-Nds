@@ -1,4 +1,5 @@
 name: Nintendo DS build
+# Build smoke test triggered from ChatGPT
 
 on:
   workflow_dispatch:
