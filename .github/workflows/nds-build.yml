@@ -45,6 +45,7 @@ jobs:
         run: |
           test -s etarium.nds
           ls -lh etarium.nds
+          ndstool -i etarium.nds
       - name: Upload Nintendo DS ROM
         uses: actions/upload-artifact@v4
         with:
