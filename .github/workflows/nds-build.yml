@@ -1,0 +1,22 @@
+name: Nintendo DS build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop/nds-cloud-build]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ROM
+        run: make
+      - name: Upload ROM
+        uses: actions/upload-artifact@v4
+        with:
+          name: etarium-nds
+          path: etarium.nds
+          if-no-files-found: error
