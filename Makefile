@@ -1,7 +1,6 @@
-# Etarium Nintendo DS build using devkitPro's libnds rules
-ifeq ($(strip $(DEVKITPRO)),)
-$(error DEVKITPRO is not set)
-endif
+# Etarium Nintendo DS / ARM9 - based on devkitPro's official DS template
+.SUFFIXES:
+
 ifeq ($(strip $(DEVKITARM)),)
 $(error DEVKITARM is not set)
 endif
@@ -13,49 +12,48 @@ BUILD := build
 SOURCES := source
 INCLUDES := include
 
-ARCH := -mthumb -mthumb-interwork -march=armv5te -mtune=arm946e-s
-PLATFORM := -DARM9
-CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(PLATFORM) -I$(LIBNDS)/include -I$(DEVKITPRO)/calico/include $(INCLUDE)
+ARCH := -march=armv5te -mtune=arm946e-s -mthumb
+CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
-LDFLAGS := -g $(ARCH) -Wl,--gc-sections -specs=ds_arm9.specs
-LIBS := -lnds9 -lcalico
-LIBNDS ?= $(DEVKITPRO)/libnds
-LIBDIRS := $(LIBNDS) $(DEVKITPRO)/calico
+LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LIBS := -lnds9
+LIBDIRS := $(LIBNDS) $(PORTLIBS)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT := $(CURDIR)/$(TARGET)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
-export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir))
+
+CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+
+ifeq ($(strip $(CPPFILES)),)
+export LD := $(CC)
+else
+export LD := $(CXX)
+endif
+
+export OFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export INCLUDE := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) $(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-export LIBS
-export OFILES := $(notdir $(patsubst %.c,%.o,$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))))
 
 .PHONY: all clean
 all: $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 $(BUILD):
 	@mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
-	@rm -rf $(BUILD) $(TARGET).nds $(TARGET).elf
+	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds
 else
-DEPENDS := $(OFILES:.o=.d)
 .PHONY: all
 all: $(OUTPUT).nds
 
 $(OUTPUT).nds: $(OUTPUT).elf
-
 $(OUTPUT).elf: $(OFILES)
-	@echo Linking $@
-	@$(CC) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
-# Explicit source-to-object rule. The working directory is build/.
-%.o: %.c
-	@echo Compiling $<
-	@$(CC) $(CFLAGS) -MMD -MP -MF $(@:.o=.d) -c $< -o $@
-
--include $(DEPENDS)
+-include $(DEPSDIR)/*.d
 endif
