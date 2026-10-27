@@ -46,6 +46,21 @@ jobs:
           test -s etarium.nds
           ls -lh etarium.nds
           ndstool -i etarium.nds
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          data = Path('etarium.nds').read_bytes()
+          assert len(data) >= 0x4000, 'ROM too small'
+          for name, off in [('ARM9', 0x20), ('ARM7', 0x30)]:
+              rom, entry, ram, size = struct.unpack_from('<IIII', data, off)
+              assert size > 0, f'{name}: empty binary'
+              assert rom >= 0x200 and rom + size <= len(data), f'{name}: invalid ROM bounds'
+              assert ram <= entry < ram + size, f'{name}: entry outside loaded binary'
+              assert any(data[rom:rom+size]), f'{name}: all-zero program'
+              print(f'{name}: ROM=0x{rom:08X}, RAM=0x{ram:08X}, ENTRY=0x{entry:08X}, SIZE={size}')
+          assert data[0x12] in (0, 2), 'Unexpected NDS unit code'
+          print('NDS static header/payload checks PASSED')
+          PY
       - name: Upload Nintendo DS ROM
         uses: actions/upload-artifact@v4
         with:
