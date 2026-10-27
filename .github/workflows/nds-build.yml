@@ -1,22 +1,42 @@
 name: Nintendo DS build
+
 on:
   workflow_dispatch:
   push:
-    branches: [main, develop/nds-cloud-build]
+    branches:
+      - main
+      - develop/nds-cloud-build
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitarm:latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Verify toolchain
+        run: |
+          test -n "$DEVKITPRO"
+          test -n "$DEVKITARM"
+          command -v arm-none-eabi-gcc
+          command -v ndstool
       - name: Build ROM
         run: make
-      - name: Upload ROM
+      - name: Verify ROM output
+        run: |
+          test -s etarium.nds
+          ls -lh etarium.nds
+      - name: Upload Nintendo DS ROM
         uses: actions/upload-artifact@v4
         with:
           name: etarium-nds
           path: etarium.nds
           if-no-files-found: error
+          retention-days: 14
