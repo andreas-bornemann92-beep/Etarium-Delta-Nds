@@ -52,7 +52,9 @@ static void status(void){
 int main(void){
  videoSetMode(MODE_FB0);
  vramSetBankA(VRAM_A_LCD);
- consoleDemoInit();
+ videoSetModeSub(MODE_0_2D);
+ vramSetBankC(VRAM_C_SUB_BG);
+ consoleInit(NULL, 3, BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
  render();status();
  while(pmMainLoop()){
  swiWaitForVBlank();
