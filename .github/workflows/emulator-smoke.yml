@@ -1,0 +1,110 @@
+name: Etarium emulator smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop/nds-cloud-build]
+    paths:
+      - 'source/**'
+      - 'Makefile'
+      - '.github/workflows/emulator-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rom:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Etarium
+        run: |
+          set -eu
+          make clean
+          make
+          test -s etarium.nds
+          ndstool -i etarium.nds
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emulator-input-rom
+          path: etarium.nds
+          retention-days: 7
+
+  emulator:
+    needs: rom
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: emulator-input-rom
+          path: rom
+      - name: Install emulator build and capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git cmake ninja-build g++ pkg-config extra-cmake-modules \
+            libcurl4-gnutls-dev libpcap0.8-dev libsdl2-dev \
+            libarchive-dev libenet-dev libzstd-dev libfaad-dev \
+            qt6-base-dev qt6-base-private-dev qt6-multimedia-dev qt6-svg-dev \
+            xvfb xauth xdotool imagemagick python3-pil
+      - name: Build official melonDS from source
+        run: |
+          git clone --depth 1 https://github.com/melonDS-emu/melonDS.git /tmp/melonds
+          cmake -S /tmp/melonds -B /tmp/melonds-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/melonds-build --parallel 2
+          find /tmp/melonds-build -type f -name 'melonDS' -executable -print
+      - name: Run real emulator and capture screen
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          EMULATOR="$(find /tmp/melonds-build -type f -name melonDS -executable | head -n 1)"
+          test -n "$EMULATOR"
+          echo "Emulator: $EMULATOR" | tee evidence/environment.txt
+          "$EMULATOR" --help >> evidence/environment.txt 2>&1 || true
+          sha256sum rom/etarium.nds >> evidence/environment.txt
+          xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+            set -u
+            timeout --signal=TERM 18s "$1" --boot 0 "$2" > evidence/emulator.log 2>&1 &
+            emulator_pid=$!
+            sleep 9
+            window_id="$(xdotool search --onlyvisible --name "melonDS" | head -n 1 || true)"
+            if [ -n "$window_id" ]; then
+              import -window "$window_id" evidence/melonds-window.png || true
+            fi
+            wait "$emulator_pid" || status=$?
+            echo "emulator_exit=${status:-0}" >> evidence/environment.txt
+          ' _ "$EMULATOR" "$GITHUB_WORKSPACE/rom/etarium.nds"
+          test -s evidence/melonds-window.png || { echo 'No emulator window captured'; exit 1; }
+          python3 - <<'PY'
+          from PIL import Image, ImageStat
+          from pathlib import Path
+          import json
+          im = Image.open('evidence/melonds-window.png').convert('RGB')
+          stat = ImageStat.Stat(im)
+          report = {
+              'screenshot_dimensions': list(im.size),
+              'channel_standard_deviations': stat.stddev,
+              'emulator_window_captured': True,
+              'runtime_verified': False,
+              'note': 'Window capture proves a GUI appeared, NOT that both DS screens rendered correctly. Review screenshot and logs.'
+          }
+          Path('evidence/report.json').write_text(json.dumps(report, indent=2))
+          print(json.dumps(report, indent=2))
+          PY
+      - name: Upload emulator evidence (even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-evidence
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
