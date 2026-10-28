@@ -118,7 +118,7 @@ jobs:
   legacy-melonds:
     needs: rom
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -160,14 +160,27 @@ jobs:
           EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
           test -n "$EMULATOR"
           sha256sum rom/etarium.nds > legacy-evidence/rom-sha256.txt
-          xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
-            timeout 18s "$1" "$2" > legacy-evidence/emulator.log 2>&1 &
+          # Hard cap on the entire virtual-display session, including GUI children.
+          # The previous workflow could wait indefinitely for an emulator child.
+          timeout -k 5s 35s xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+            set -u
+            "$1" "$2" > legacy-evidence/emulator.log 2>&1 &
             pid=$!
-            sleep 9
-            wid="$(xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
-            if [ -n "$wid" ]; then import -window "$wid" legacy-evidence/legacy-screen.png || true; fi
-            wait "$pid" || true
-          ' _ "$EMULATOR" "$GITHUB_WORKSPACE/rom/etarium.nds"
+            sleep 8
+            wid="$(timeout 3s xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
+            if [ -n "$wid" ]; then
+              timeout -k 2s 5s import -window "$wid" legacy-evidence/legacy-screen.png || true
+            fi
+            kill -TERM "$pid" 2>/dev/null || true
+            sleep 1
+            kill -KILL "$pid" 2>/dev/null || true
+            echo "Emulator session ended" >> legacy-evidence/emulator.log
+            exit 0
+          ' _ "$EMULATOR" "$GITHUB_WORKSPACE/rom/etarium.nds" || {
+            code=$?
+            echo "Legacy emulator session exited with status $code" | tee -a legacy-evidence/emulator.log
+            exit "$code"
+          }
           test -s legacy-evidence/legacy-screen.png
           python3 - <<'PY'
           from PIL import Image, ImageStat
