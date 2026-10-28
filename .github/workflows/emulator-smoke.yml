@@ -110,3 +110,66 @@ jobs:
           path: evidence/
           if-no-files-found: warn
           retention-days: 14
+
+  legacy-melonds:
+    needs: rom
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: emulator-input-rom
+          path: rom
+      - name: Prepare evidence and dependencies
+        run: |
+          mkdir -p legacy-evidence
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git cmake make g++ pkg-config libsdl2-dev libarchive-dev \
+            libgtk-3-dev qtbase5-dev qtbase5-dev-tools libqt5opengl5-dev \
+            xvfb xauth xdotool imagemagick python3-pil
+      - name: Compile melonDS 0.9.5
+        run: |
+          set -eux
+          git clone --depth 1 --branch 0.9.5 https://github.com/melonDS-emu/melonDS.git /tmp/melonds-095
+          cmake -S /tmp/melonds-095 -B /tmp/melonds-095-build -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/melonds-095-build --parallel 2
+          find /tmp/melonds-095-build -type f -executable -name 'melonDS' -print | tee legacy-evidence/executables.txt
+      - name: Start legacy emulator and capture output
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
+          test -n "$EMULATOR"
+          sha256sum rom/etarium.nds > legacy-evidence/rom-sha256.txt
+          xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+            timeout 18s "$1" "$2" > legacy-evidence/emulator.log 2>&1 &
+            pid=$!
+            sleep 9
+            wid="$(xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
+            if [ -n "$wid" ]; then import -window "$wid" legacy-evidence/legacy-screen.png || true; fi
+            wait "$pid" || true
+          ' _ "$EMULATOR" "$GITHUB_WORKSPACE/rom/etarium.nds"
+          test -s legacy-evidence/legacy-screen.png
+          python3 - <<'PY'
+          from PIL import Image, ImageStat
+          from pathlib import Path
+          import json
+          im = Image.open('legacy-evidence/legacy-screen.png').convert('RGB')
+          data = {'version': '0.9.5', 'dimensions': im.size,
+                  'rgb_standard_deviation': ImageStat.Stat(im).stddev,
+                  'note': 'Screenshot is diagnostic; manually inspect both DS screens.'}
+          Path('legacy-evidence/report.json').write_text(json.dumps(data, indent=2))
+          print(data)
+          PY
+      - name: Upload legacy emulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-melonds-095-evidence
+          path: legacy-evidence/
+          if-no-files-found: warn
+          retention-days: 14
