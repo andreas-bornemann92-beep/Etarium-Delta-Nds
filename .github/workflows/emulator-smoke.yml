@@ -58,6 +58,16 @@ jobs:
             cp etarium.nds "diagnostic-roms/$probe.nds"
             mv Makefile.diagnostic-backup Makefile
           done
+      - name: Compile official devkitPro hello_world control in native toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/devkitPro/nds-examples.git /tmp/nds-examples
+          test -f /tmp/nds-examples/hello_world/Makefile
+          make -C /tmp/nds-examples/hello_world --no-print-directory
+          test -s /tmp/nds-examples/hello_world/hello_world.nds
+          cp /tmp/nds-examples/hello_world/hello_world.nds diagnostic-roms/upstream_control.nds
+          sha256sum diagnostic-roms/upstream_control.nds
       - uses: actions/upload-artifact@v4
         with:
           name: etarium-startup-probes
@@ -187,22 +197,6 @@ jobs:
       - name: Generate isolated ROM header variants
         run: |
           python3 tests/make_header_variants.py rom/etarium.nds variants
-      - name: Build independent upstream devkitPro hello_world control
-        shell: bash
-        run: |
-          set -euo pipefail
-          git clone --depth 1 https://github.com/devkitPro/nds-examples.git /tmp/nds-examples
-          EXAMPLE=/tmp/nds-examples/hello_world
-          test -f "$EXAMPLE/Makefile"
-          echo "devkitPro/nds-examples/hello_world" > legacy-evidence/upstream-selected.txt
-          docker run --rm -v "$EXAMPLE:/work" -w /work devkitpro/devkitarm:latest \
-            sh -c 'make -j2' > legacy-evidence/upstream-build.log 2>&1 || {
-              tail -n 80 legacy-evidence/upstream-build.log
-              exit 1
-            }
-          test -s "$EXAMPLE/hello_world.nds"
-          cp "$EXAMPLE/hello_world.nds" startup-probes/upstream_control.nds
-          sha256sum startup-probes/upstream_control.nds > legacy-evidence/upstream-sha256.txt
       - name: Run 10 sequential emulator control cycles
         env:
           QT_QPA_PLATFORM: xcb
