@@ -37,6 +37,34 @@ jobs:
           path: etarium.nds
           retention-days: 7
 
+  diagnostic-roms:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile isolated ARM9 and ARM7 IPC startup probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostic-roms
+          for probe in arm9_minimal arm7_ipc; do
+            cp Makefile Makefile.diagnostic-backup
+            sed -i "s|^SOURCES := source$|SOURCES := tests/diagnostics/$probe|" Makefile
+            make clean
+            make
+            test -s etarium.nds
+            ndstool -i etarium.nds
+            cp etarium.nds "diagnostic-roms/$probe.nds"
+            mv Makefile.diagnostic-backup Makefile
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: etarium-startup-probes
+          path: diagnostic-roms/*.nds
+          if-no-files-found: error
+          retention-days: 14
+
   emulator:
     needs: rom
     runs-on: ubuntu-24.04
@@ -117,7 +145,7 @@ jobs:
           retention-days: 14
 
   legacy-melonds:
-    needs: rom
+    needs: [rom, diagnostic-roms]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -126,6 +154,10 @@ jobs:
         with:
           name: emulator-input-rom
           path: rom
+      - uses: actions/download-artifact@v4
+        with:
+          name: etarium-startup-probes
+          path: startup-probes
       - name: Prepare evidence and dependencies
         run: |
           mkdir -p legacy-evidence
@@ -165,7 +197,8 @@ jobs:
           EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
           mkdir -p legacy-evidence/variants
           cp variants/manifest.json legacy-evidence/variants/manifest.json
-          for ROM in variants/*.nds; do
+          printf 'arm9_minimal: direct ARM9 framebuffer without IPC; arm7_ipc: pmMainLoop and keys scan\\n' > legacy-evidence/variants/probes.txt
+          for ROM in variants/*.nds startup-probes/*.nds; do
             NAME="$(basename "$ROM" .nds)"
             echo "Testing $NAME"
             mkdir -p "legacy-evidence/variants/$NAME"
