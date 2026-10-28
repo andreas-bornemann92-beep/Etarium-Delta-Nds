@@ -201,8 +201,8 @@ jobs:
           # The previous workflow could wait indefinitely for an emulator child.
           timeout -k 5s 35s xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
             set -u
-            # Drain all emulator output but retain only first 64 KiB.
-            "$1" "$2" > >(python3 -c 'import sys; out=open("legacy-evidence/emulator.log","wb"); remaining=65536; stream=sys.stdin.buffer; exec("while True:\\n chunk=stream.read(65536)\\n if not chunk: break\\n if remaining: out.write(chunk[:remaining]); remaining=max(0,remaining-len(chunk))")') 2>&1 &
+            # Discard verbose ARM7 diagnostic spam; avoid fragile nested quoting.
+            "$1" "$2" >/dev/null 2>&1 &
             pid=$!
             sleep 8
             wid="$(timeout 3s xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
