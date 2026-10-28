@@ -187,6 +187,23 @@ jobs:
       - name: Generate isolated ROM header variants
         run: |
           python3 tests/make_header_variants.py rom/etarium.nds variants
+      - name: Build independent upstream libnds graphics example
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/devkitPro/nds-examples.git /tmp/nds-examples
+          find /tmp/nds-examples -name Makefile -path '*/graphics/*' | head -n 30 > legacy-evidence/upstream-candidates.txt
+          # The libnds graphics example is independent of Etarium source.
+          EXAMPLE="$(find /tmp/nds-examples -path '*/graphics/*' -name Makefile | head -n 1 | xargs -r dirname)"
+          test -n "$EXAMPLE"
+          echo "$EXAMPLE" > legacy-evidence/upstream-selected.txt
+          docker run --rm -v "$EXAMPLE:/work" -w /work devkitpro/devkitarm:latest sh -c 'make -j2 && find . -maxdepth 2 -name "*.nds" -print' > legacy-evidence/upstream-build.log 2>&1 || {
+            cat legacy-evidence/upstream-build.log
+            exit 1
+          }
+          find "$EXAMPLE" -name '*.nds' -type f -print -quit | xargs -r -I '{}' cp '{}' startup-probes/upstream_control.nds
+          test -s startup-probes/upstream_control.nds
+          sha256sum startup-probes/upstream_control.nds > legacy-evidence/upstream-sha256.txt
       - name: Capture each variant with melonDS 0.9.5
         env:
           QT_QPA_PLATFORM: xcb
