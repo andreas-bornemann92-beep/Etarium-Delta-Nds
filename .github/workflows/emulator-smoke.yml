@@ -223,10 +223,6 @@ jobs:
           EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
           test -n "$EMULATOR"
           python3 tests/ten_cycle_capture.py "$EMULATOR" startup-probes/upstream_control.nds rom/etarium.nds legacy-evidence/ten-cycle
-      - name: Evaluate all 10 legacy emulator cycles (fail on identical white captures)
-        if: always()
-        run: |
-          python3 tests/assess_legacy.py legacy-evidence/ten-cycle
       - name: Capture each variant with melonDS 0.9.5
         env:
           QT_QPA_PLATFORM: xcb
@@ -304,6 +300,10 @@ jobs:
           Path('legacy-evidence/report.json').write_text(json.dumps(data, indent=2))
           print(data)
           PY
+      - name: Evaluate all 10 legacy emulator cycles (fail on identical white captures)
+        if: always()
+        run: |
+          python3 tests/assess_legacy.py legacy-evidence/ten-cycle
       - name: Upload legacy emulator evidence
         if: always()
         uses: actions/upload-artifact@v4
