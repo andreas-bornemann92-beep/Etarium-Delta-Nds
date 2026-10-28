@@ -92,7 +92,7 @@ jobs:
           retention-days: 14
 
   emulator:
-    needs: rom
+    needs: [rom, diagnostic-roms]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -101,6 +101,10 @@ jobs:
         with:
           name: emulator-input-rom
           path: rom
+      - uses: actions/download-artifact@v4
+        with:
+          name: etarium-startup-probes
+          path: startup-probes
       - name: Initialize diagnostic output
         run: mkdir -p evidence && printf 'Workflow started\\n' > evidence/environment.txt
       - name: Install emulator build and capture dependencies
@@ -161,6 +165,36 @@ jobs:
           Path('evidence/report.json').write_text(json.dumps(report, indent=2))
           print(json.dumps(report, indent=2))
           PY
+      - name: Run same upstream ROM under current melonDS
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          EMULATOR="$(find /tmp/melonds-build -type f -name melonDS -executable | head -n 1)"
+          mkdir -p evidence/control
+          sha256sum startup-probes/upstream_control.nds > evidence/control/sha256.txt
+          timeout -k 3s 22s xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+            "$1" "$2" >/dev/null 2>&1 &
+            pid=$!
+            sleep 8
+            wid="$(timeout 2s xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
+            if [ -n "$wid" ]; then timeout -k 2s 4s import -window "$wid" "$3" || true; fi
+            kill -TERM "$pid" 2>/dev/null || true
+            exit 0
+          ' _ "$EMULATOR" "$GITHUB_WORKSPACE/startup-probes/upstream_control.nds" "$GITHUB_WORKSPACE/evidence/control/upstream.png" || true
+          test -s evidence/control/upstream.png
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          import json
+          f=Path('evidence/control/upstream.png')
+          im=Image.open(f).convert('RGB')
+          report={'capture':str(f),'dimensions':list(im.size),'unique_colours':len(im.getcolors(im.width*im.height) or []),'boot_verified':False}
+          Path('evidence/control/report.json').write_text(json.dumps(report,indent=2))
+          print(report)
+          PY
       - name: Upload emulator evidence (even on failure)
         if: always()
         uses: actions/upload-artifact@v4
@@ -210,6 +244,20 @@ jobs:
           fi
           find /tmp/melonds-095-build -type f -executable -name 'melonDS' -print | tee legacy-evidence/executables.txt
           test -s legacy-evidence/executables.txt
+      - name: Audit legacy melonDS BIOS firmware and direct-boot settings
+        run: |
+          set -euo pipefail
+          {
+            echo "melonDS tag: 0.9.5"
+            echo "Expected BIOS files: bios7.bin bios9.bin firmware.bin"
+            echo "Present BIOS/firmware in runner workspace:"
+            find "$GITHUB_WORKSPACE" /tmp/melonds-095-build -maxdepth 3 \
+              \( -name 'bios7.bin' -o -name 'bios9.bin' -o -name 'firmware.bin' \) -printf '%p %s bytes\\n' 2>/dev/null || true
+            echo "Legacy emulator configurations:"
+            find "$HOME" /tmp/melonds-095-build -maxdepth 4 -name 'melonDS.ini' -print 2>/dev/null || true
+            echo "No copyrighted BIOS files are downloaded by this workflow."
+          } > legacy-evidence/boot-environment.txt
+          cat legacy-evidence/boot-environment.txt
       - name: Generate isolated ROM header variants
         run: |
           python3 tests/make_header_variants.py rom/etarium.nds variants
