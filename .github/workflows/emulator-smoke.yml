@@ -106,7 +106,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: etarium-startup-probes
-          path: diagnostic-roms/*.nds
+          path: |
+            diagnostic-roms/*.nds
+            diagnostic-roms/five-variants-manifest.json
           if-no-files-found: error
           retention-days: 14
 
