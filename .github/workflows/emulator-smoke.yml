@@ -147,7 +147,7 @@ jobs:
   legacy-melonds:
     needs: [rom, diagnostic-roms]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -203,6 +203,16 @@ jobs:
           test -s "$EXAMPLE/hello_world.nds"
           cp "$EXAMPLE/hello_world.nds" startup-probes/upstream_control.nds
           sha256sum startup-probes/upstream_control.nds > legacy-evidence/upstream-sha256.txt
+      - name: Run 10 sequential emulator control cycles
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
+          test -n "$EMULATOR"
+          python3 tests/ten_cycle_capture.py "$EMULATOR" startup-probes/upstream_control.nds rom/etarium.nds legacy-evidence/ten-cycle
       - name: Capture each variant with melonDS 0.9.5
         env:
           QT_QPA_PLATFORM: xcb
