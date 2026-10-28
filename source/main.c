@@ -1,7 +1,7 @@
 #include <nds.h>
 #include <stdio.h>
 #include <stdbool.h>
-/* ETARIUM V1: deterministic Nintendo DS startup and playable map. */
+/* ETARIUM V1: framebuffer pixels require bit 15 set for visibility. */
 #define W 256
 #define H 192
 #define T 16
@@ -23,7 +23,7 @@ static int px=2,py=2,steps=0;
 static bool playing=false;
 static void rect(int x,int y,int w,int h,u16 c){
  for(int j=y;j<y+h;j++)for(int i=x;i<x+w;i++)
- if(i>=0&&i<W&&j>=0&&j<H)fb[j*W+i]=c;
+ if(i>=0&&i<W&&j>=0&&j<H)fb[j*W+i]=(u16)(c | BIT(15));
 }
 static bool can_move(int x,int y){
  return x>=0&&x<16&&y>=0&&y<12&&map[y][x]=='.';
@@ -50,6 +50,7 @@ static void status(void){
  else iprintf("Steuerkreuz: Bewegen\nB: Zurueck\n\nX:%d Y:%d\nSchritte:%d\n",px,py,steps);
 }
 int main(void){
+ lcdMainOnTop();
  videoSetMode(MODE_FB0);
  vramSetBankA(VRAM_A_LCD);
  videoSetModeSub(MODE_0_2D);
