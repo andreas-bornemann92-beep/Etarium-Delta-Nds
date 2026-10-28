@@ -42,6 +42,8 @@ jobs:
         with:
           name: emulator-input-rom
           path: rom
+      - name: Initialize diagnostic output
+        run: mkdir -p evidence && printf 'Workflow started\\n' > evidence/environment.txt
       - name: Install emulator build and capture dependencies
         run: |
           sudo apt-get update
@@ -68,12 +70,12 @@ jobs:
           mkdir -p evidence
           EMULATOR="$(find /tmp/melonds-build -type f -name melonDS -executable | head -n 1)"
           test -n "$EMULATOR"
-          echo "Emulator: $EMULATOR" | tee evidence/environment.txt
+          echo "Emulator: $EMULATOR" | tee -a evidence/environment.txt
           "$EMULATOR" --help >> evidence/environment.txt 2>&1 || true
           sha256sum rom/etarium.nds >> evidence/environment.txt
           xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
             set -u
-            timeout --signal=TERM 18s "$1" --boot 0 "$2" > evidence/emulator.log 2>&1 &
+            timeout --signal=TERM 18s "$1" "$2" > evidence/emulator.log 2>&1 &
             emulator_pid=$!
             sleep 9
             window_id="$(xdotool search --onlyvisible --name "melonDS" | head -n 1 || true)"
