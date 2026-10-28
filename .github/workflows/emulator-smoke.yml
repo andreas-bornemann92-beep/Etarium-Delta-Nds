@@ -8,6 +8,7 @@ on:
       - 'source/**'
       - 'Makefile'
       - 'tests/**'
+      - 'include/**'
       - '.github/workflows/emulator-smoke.yml'
 
 permissions:
@@ -18,6 +19,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native-logic:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run logic regression with address/undefined sanitizers
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined \
+            -fno-omit-frame-pointer -Iinclude tests/native_logic_test.c -o /tmp/etarium-logic-test
+          /tmp/etarium-logic-test
+          for cycle in $(seq 1 10); do
+            echo "Native regression cycle $cycle/10"
+            /tmp/etarium-logic-test
+          done
+
   rom:
     runs-on: ubuntu-latest
     container:
@@ -207,6 +223,10 @@ jobs:
           EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
           test -n "$EMULATOR"
           python3 tests/ten_cycle_capture.py "$EMULATOR" startup-probes/upstream_control.nds rom/etarium.nds legacy-evidence/ten-cycle
+      - name: Evaluate all 10 legacy emulator cycles (fail on identical white captures)
+        if: always()
+        run: |
+          python3 tests/assess_legacy.py legacy-evidence/ten-cycle
       - name: Capture each variant with melonDS 0.9.5
         env:
           QT_QPA_PLATFORM: xcb
