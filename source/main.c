@@ -1,7 +1,7 @@
 #include <nds.h>
 #include <stdio.h>
 #include <stdbool.h>
-/* ETARIUM V1: framebuffer pixels require bit 15 set for visibility. */
+/* ETARIUM DS compatibility architecture: tiled 2D engine background + sub console. */
 #define W 256
 #define H 192
 #define T 16
@@ -18,7 +18,7 @@ static const char map[12][17]={
 "#...~~~........#",
 "#..............#",
 "################"};
-static volatile u16 * const fb=(volatile u16*)0x06800000;
+static volatile u16 *fb = NULL;
 static int px=2,py=2,steps=0;
 static bool playing=false;
 static void rect(int x,int y,int w,int h,u16 c){
@@ -49,13 +49,19 @@ static void status(void){
  if(!playing)iprintf("A oder START: Beginnen\n\nDS/Delta Starttest\n");
  else iprintf("Steuerkreuz: Bewegen\nB: Zurueck\n\nX:%d Y:%d\nSchritte:%d\n",px,py,steps);
 }
-int main(void){
+static void init_video(void) {
  lcdMainOnTop();
- videoSetMode(MODE_FB0);
- vramSetBankA(VRAM_A_LCD);
+ /* Use the DS 2D background engine rather than raw LCD framebuffer mode. */
+ videoSetMode(MODE_5_2D);
+ vramSetBankA(VRAM_A_MAIN_BG);
+ int background = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+ fb = (volatile u16 *)bgGetGfxPtr(background);
  videoSetModeSub(MODE_0_2D);
  vramSetBankC(VRAM_C_SUB_BG);
  consoleInit(NULL, 3, BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
+}
+int main(void){
+ init_video();
  render();status();
  while(pmMainLoop()){
  swiWaitForVBlank();
