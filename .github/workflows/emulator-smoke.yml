@@ -74,6 +74,25 @@ jobs:
             cp etarium.nds "diagnostic-roms/$probe.nds"
             mv Makefile.diagnostic-backup Makefile
           done
+      - name: Build five isolated startup variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/generate_five_variants.py source/main.c diagnostic-sources
+          cp diagnostic-sources/manifest.json diagnostic-roms/five-variants-manifest.json
+          cp Makefile /tmp/etarium-original-makefile
+          for d in diagnostic-sources/0*; do
+            name="$(basename "$d")"
+            echo "Building hypothesis $name"
+            cp /tmp/etarium-original-makefile Makefile
+            sed -i "s|^SOURCES := source$|SOURCES := $d|" Makefile
+            make clean
+            make --no-print-directory
+            test -s etarium.nds
+            cp etarium.nds "diagnostic-roms/$name.nds"
+          done
+          cp /tmp/etarium-original-makefile Makefile
+          sha256sum diagnostic-roms/0*.nds
       - name: Compile official devkitPro hello_world control in native toolchain
         shell: bash
         run: |
@@ -261,6 +280,46 @@ jobs:
       - name: Generate isolated ROM header variants
         run: |
           python3 tests/make_header_variants.py rom/etarium.nds variants
+      - name: Test five successive video hypotheses under melonDS 0.9.5
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
+          mkdir -p legacy-evidence/five-variants
+          cp startup-probes/five-variants-manifest.json legacy-evidence/five-variants/manifest.json
+          for ROM in startup-probes/0*.nds; do
+            name="$(basename "$ROM" .nds)"
+            echo "Diagnostic hypothesis $name"
+            mkdir -p "legacy-evidence/five-variants/$name"
+            for cycle in 1 2; do
+              DEST="$GITHUB_WORKSPACE/legacy-evidence/five-variants/$name/cycle-$cycle.png"
+              timeout -k 2s 18s xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+                "$1" "$2" >/dev/null 2>&1 &
+                pid=$!
+                sleep 5
+                wid="$(timeout 2s xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
+                if [ -n "$wid" ]; then
+                  timeout -k 1s 3s import -window "$wid" "$3" >/dev/null 2>&1 || true
+                fi
+                kill -TERM "$pid" 2>/dev/null || true
+              ' _ "$EMULATOR" "$GITHUB_WORKSPACE/$ROM" "$DEST" || true
+              if [ -s "$DEST" ]; then sha256sum "$DEST"; else echo "CAPTURE_MISSING $name cycle-$cycle"; fi
+            done
+          done
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          base=Path('legacy-evidence/five-variants')
+          report=[]
+          for f in sorted(base.glob('*/cycle-*.png')):
+              report.append({'variant':f.parent.name,'capture':str(f.relative_to(base)),
+                  'sha256':hashlib.sha256(f.read_bytes()).hexdigest()})
+          (base/'captures.json').write_text(json.dumps(report,indent=2))
+          print(f'Captured {len(report)} / 10 expected frames')
+          PY
       - name: Run 10 sequential emulator control cycles
         env:
           QT_QPA_PLATFORM: xcb
