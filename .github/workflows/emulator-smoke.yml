@@ -7,6 +7,7 @@ on:
     paths:
       - 'source/**'
       - 'Makefile'
+      - 'tests/**'
       - '.github/workflows/emulator-smoke.yml'
 
 permissions:
@@ -120,6 +121,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: emulator-input-rom
@@ -150,6 +152,41 @@ jobs:
           fi
           find /tmp/melonds-095-build -type f -executable -name 'melonDS' -print | tee legacy-evidence/executables.txt
           test -s legacy-evidence/executables.txt
+      - name: Generate isolated ROM header variants
+        run: |
+          python3 tests/make_header_variants.py rom/etarium.nds variants
+      - name: Capture each variant with melonDS 0.9.5
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
+          mkdir -p legacy-evidence/variants
+          cp variants/manifest.json legacy-evidence/variants/manifest.json
+          for ROM in variants/*.nds; do
+            NAME="$(basename "$ROM" .nds)"
+            echo "Testing $NAME"
+            mkdir -p "legacy-evidence/variants/$NAME"
+            # Output is discarded to avoid gigabyte-scale ARM7 spam.
+            timeout -k 3s 22s xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+              "$1" "$2" >/dev/null 2>&1 &
+              pid=$!
+              sleep 7
+              wid="$(timeout 2s xdotool search --onlyvisible --name melonDS | head -n 1 || true)"
+              if [ -n "$wid" ]; then
+                timeout -k 2s 4s import -window "$wid" "$3" || true
+              fi
+              kill -TERM "$pid" 2>/dev/null || true
+              exit 0
+            ' _ "$EMULATOR" "$GITHUB_WORKSPACE/$ROM" "$GITHUB_WORKSPACE/legacy-evidence/variants/$NAME/screen.png" || true
+            if [ ! -s "legacy-evidence/variants/$NAME/screen.png" ]; then
+              echo "Screenshot unavailable" > "legacy-evidence/variants/$NAME/status.txt"
+            else
+              echo "Screenshot captured; visual assessment required" > "legacy-evidence/variants/$NAME/status.txt"
+            fi
+          done
       - name: Start legacy emulator and capture output
         env:
           QT_QPA_PLATFORM: xcb
