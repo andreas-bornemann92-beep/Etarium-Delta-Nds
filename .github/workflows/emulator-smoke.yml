@@ -294,6 +294,20 @@ jobs:
             echo "No copyrighted BIOS files are downloaded by this workflow."
           } > legacy-evidence/boot-environment.txt
           cat legacy-evidence/boot-environment.txt
+      - name: Compare isolated direct boot and firmware boot profiles
+        env:
+          QT_QPA_PLATFORM: xcb
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          EMULATOR="$(find /tmp/melonds-095-build -type f -name melonDS -executable | head -n 1)"
+          test -n "$EMULATOR"
+          python3 tests/boot_profiles.py \
+            --emulator "$EMULATOR" \
+            --control startup-probes/upstream_control.nds \
+            --etarium rom/etarium.nds \
+            --out legacy-evidence/boot-profiles
       - name: Generate isolated ROM header variants
         run: |
           python3 tests/make_header_variants.py rom/etarium.nds variants
