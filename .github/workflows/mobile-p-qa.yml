@@ -1,0 +1,35 @@
+name: Etarium P production startup and NPC QA
+on:
+  push:
+    branches: [gh-pages]
+    paths:
+      - 'p/**'
+      - 'etarium-p.html'
+      - '.github/workflows/mobile-p-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run game and editor integration tests
+        run: |
+          python3 -m http.server 8787 --bind 127.0.0.1 &
+          sleep 2
+          node p/smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: etarium-p-browser-proof
+          path: etarium-p-browser-proof.png
+          if-no-files-found: warn
