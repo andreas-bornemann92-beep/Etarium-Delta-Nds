@@ -1,0 +1,44 @@
+const {chromium}=require('playwright');
+(async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8787/m/',{waitUntil:'load'});
+ await page.waitForFunction(()=>window.etariumDiagnostics&&document.getElementById('j-new'));
+ for(const label of ['Nach oben','Nach unten','Nach links','Nach rechts','A','B','Start','Select']){
+  if(await page.getByRole('button',{name:label,exact:true}).count()!==1)throw Error('Missing control: '+label);
+ }
+ await page.locator('#j-new').click();
+ await page.locator('#j-name').fill('Mira');
+ await page.locator('#j-confirm').click();
+ const initial=await page.evaluate(()=>window.etariumDiagnostics.getState());
+ if(!initial.running||initial.stage!=='world'||initial.x!==24||initial.y!==32)throw Error('Start/spawn failed');
+ await page.getByRole('button',{name:'A',exact:true}).click();
+ let panel=await page.evaluate(()=>window.etariumDiagnostics.getState().panel);
+ if(panel!=='dialog')throw Error('A interaction missing');
+ await page.getByRole('button',{name:'B',exact:true}).click();
+ panel=await page.evaluate(()=>window.etariumDiagnostics.getState().panel);
+ if(panel!==null)throw Error('B did not dismiss dialog');
+ await page.getByRole('button',{name:'Select',exact:true}).click();
+ if((await page.locator('#panel-body').innerText()).indexOf('Mira')===-1)throw Error('Select status failed');
+ await page.getByRole('button',{name:'B',exact:true}).click();
+ await page.getByRole('button',{name:'Start',exact:true}).click();
+ if((await page.locator('#panel-title').innerText())!=='Spielmenü')throw Error('Start menu failed');
+ await page.getByRole('button',{name:'Fortsetzen'}).click();
+ await page.getByRole('button',{name:'Nach oben'}).click();
+ await page.waitForTimeout(230);
+ const moved=await page.evaluate(()=>window.etariumDiagnostics.getState());
+ if(moved.y>=32)throw Error('D-pad movement failed');
+ await page.getByRole('button',{name:'Start',exact:true}).click();
+ await page.getByRole('button',{name:'Speichern'}).click();
+ await page.getByRole('button',{name:'B',exact:true}).click();
+ await page.getByRole('button',{name:'Start',exact:true}).click();
+ await page.getByRole('button',{name:'Zum Titelbildschirm'}).click();
+ await page.locator('#j-continue').click();
+ const resumed=await page.evaluate(()=>window.etariumDiagnostics.getState());
+ if(resumed.y!==moved.y||resumed.character.name!=='Mira')throw Error('Load failed');
+ if(errors.length)throw Error(errors.join('; '));
+ await page.screenshot({path:'etarium-m-controls.png',fullPage:true});
+ console.log(JSON.stringify({PASS:true,initial,moved,resumed},null,2));
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
