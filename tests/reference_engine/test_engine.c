@@ -1,0 +1,4 @@
+#include "engine.h"
+#include <assert.h>
+#include <stdio.h>
+int main(void){EtGame g;et_init(&g,123);assert(g.state==ET_TITLE);et_step(&g,ET_CONFIRM);assert(g.state==ET_WORLD);int x=g.entities[0].x;et_step(&g,ET_RIGHT);assert(g.entities[0].x==x+1);g.map.tiles[7][12]=1;assert(!et_move(&g,0,1,0));assert(g.entities[0].x==11);assert(!et_move(&g,0,1,1));assert(et_damage(0,10,10,10,100)==0);assert(et_damage(50,40,20,10,200)>et_damage(50,40,20,10,100));EtSpirit a={.hp=20,.attack=40,.level=10},b={.hp=20,.defense=20};assert(et_battle_attack(&g,&a,&b,50,100)>0);assert(b.hp<20);uint8_t bytes[ET_SAVE_SIZE];assert(et_save(&g,bytes));EtGame h;assert(et_load(&h,bytes));assert(h.entities[0].x==g.entities[0].x&&h.tick==g.tick);bytes[10]^=1;assert(!et_load(&h,bytes));puts("PASS: state, movement, collision, damage, battle, save/load, corruption");return 0;}
