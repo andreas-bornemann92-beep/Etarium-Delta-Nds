@@ -1,0 +1,45 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etarium P – Kortex Testlabor</title>
+<style>*{box-sizing:border-box}body{margin:0;padding:20px;background:#121b28;color:#eef0f2;font-family:system-ui,sans-serif}main{max-width:700px;margin:auto}h1{color:#f1b3bd}button{background:#a54b60;color:#fff;border:0;border-radius:10px;padding:12px 18px;font-weight:700}#results{background:#202e3f;border:1px solid #546476;border-radius:12px;padding:14px;margin:12px 0}li{margin:7px 0}.pass{color:#95efb5}.fail{color:#ffb2ad}iframe{width:100%;height:575px;border:2px solid #a35b6f;border-radius:10px;background:#171e2b}small{color:#c5c6ca}</style></head><body><main><h1>Etarium P · Kortex Testlabor</h1><p>Dieser Test prüft den tatsächlichen Browserablauf. Er arbeitet mit einem eigenen Spielstand für Version P.</p><button id="run">Spieltest neu starten</button><div id="results">Test noch nicht gestartet.</div><iframe id="game" title="Etarium Testwelt" src="index.html?qa=1"></iframe><small>Tests: Initialisierung, Charaktereditor, Spielstart, Rendering, NPC-Routine, Dialog, Befragung, Menü und Speichern.</small></main>
+<script>
+const result=document.getElementById('results'),frame=document.getElementById('game');
+function line(text,ok){const p=document.createElement('p');p.className=ok?'pass':'fail';p.textContent=(ok?'✓ ':'✗ ')+text;result.appendChild(p)}
+function assert(cond,msg){if(!cond)throw Error(msg);line(msg,true)}
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+async function until(fn,timeout=9000){let start=Date.now();while(Date.now()-start<timeout){if(fn())return;await delay(75)}throw Error('Zeitüberschreitung: '+String(fn).slice(0,60))}
+async function test(){
+ result.textContent='';try{
+  await until(()=>frame.contentWindow&&frame.contentWindow.etariumDiagnostics);
+  const w=frame.contentWindow,d=w.document,state=()=>w.etariumDiagnostics.getState(),click=id=>d.getElementById(id).click();
+  assert(state().stage==='title','Titelmenü sichtbar');
+  click('j-new');assert(state().stage==='editor','Charaktereditor öffnet');
+  d.getElementById('j-name').value='KortexTester';
+  d.getElementById('j-gender').value='female';
+  click('j-confirm');
+  await until(()=>state().stage==='world');
+  assert(state().running,'Editor → Spielwelt funktioniert');
+  assert(state().x===24&&state().y===32,'Startpunkt am Südtor korrekt');
+  await until(()=>state().renderFrames>15);
+  await until(()=>state().animationFrames===18,12000);
+  assert(state().bootErrors.length===0,'Keine JavaScript-Laufzeitfehler');
+  assert(state().npcs.length===3,'Drei NPCs initialisiert');
+  const first=state().npcs[1];await delay(1700);const after=state().npcs[1];
+  assert(after.moving||after.x!==first.x||after.y!==first.y,'NPC Toren läuft seine Route');
+  async function step(dir,count){for(let i=0;i<count;i++){assert(w.etariumDiagnostics.move(dir),'Bewegung: '+dir);await delay(240)}}
+  await step('up',5);await step('right',1);
+  click('action-a');assert(d.getElementById('panel-title').textContent==='Mara','Dialog mit Mara startet');
+  click('action-b');
+  await step('up',2);await step('right',2);
+  click('action-a');assert(d.getElementById('panel-title').textContent==='Elis','Befragung von Elis erreichbar');
+  click('action-a');assert(state().npcResult.checked,'Brunnenprüfergebnis gespeichert');
+  click('action-b');
+  click('select');assert(state().panel==='select','SELECT öffnet Charakter und Geister');
+  click('action-b');
+  click('start');assert(state().panel==='start','START öffnet Spielmenü');
+  click('action-b');
+  assert(state().bootErrors.length===0,'Spiel bleibt ohne Laufzeitfehler');
+  line('ALLE PRÜFUNGEN BESTANDEN',true);
+ }catch(e){line(e.message,false);console.error(e)}
+}
+document.getElementById('run').addEventListener('click',()=>{frame.src='index.html?qa='+Date.now();frame.onload=()=>test()});
+frame.addEventListener('load',test);
+</script></body></html>
