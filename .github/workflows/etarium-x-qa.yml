@@ -1,0 +1,32 @@
+name: Etarium X full-game quality gate
+on:
+  push:
+    branches: [gh-pages]
+    paths: ['x/**','etarium-x.html','.github/workflows/etarium-x-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run complete browser smoke
+        run: |
+          python3 -m http.server 8787 --bind 127.0.0.1 &
+          sleep 2
+          node x/smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: etarium-x-browser-proof
+          path: etarium-x-browser-proof.png
+          if-no-files-found: warn
