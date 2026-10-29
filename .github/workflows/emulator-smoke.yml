@@ -34,6 +34,21 @@ jobs:
             /tmp/etarium-logic-test
           done
 
+  backup-reference-engine:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile restored 29 October engine and run 10 regression cycles
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=undefined \
+            -fno-omit-frame-pointer tests/reference_engine/engine.c \
+            tests/reference_engine/test_engine.c -o /tmp/etarium-reference-engine-test
+          for cycle in $(seq 1 10); do
+            echo "Backup engine test cycle $cycle/10"
+            /tmp/etarium-reference-engine-test
+          done
+
   rom:
     runs-on: ubuntu-latest
     container:
