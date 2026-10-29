@@ -1,0 +1,31 @@
+const { chromium } = require('playwright');
+(async()=>{
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://127.0.0.1:8787/j/',{waitUntil:'load'});
+  await page.waitForFunction(()=>window.etariumDiagnostics && document.getElementById('j-title'));
+  await page.getByRole('button',{name:'Neues Spiel'}).first().click();
+  await page.locator('#j-name').fill('Arin');
+  await page.locator('#j-gender').selectOption('female');
+  await page.locator('#j-body').selectOption('strong');
+  await page.locator('#j-height').selectOption('tall');
+  await page.locator('#j-hair').selectOption('3');
+  await page.locator('#j-haircolor').selectOption('#a84e39');
+  await page.locator('#j-confirm').click();
+  let state=await page.evaluate(()=>window.etariumDiagnostics.getState());
+  if(state.stage!=='world'||!state.running||state.character.gender!=='female'||state.character.name!=='Arin')throw Error('Character start failed '+JSON.stringify(state));
+  const x=state.x;
+  for(let i=0;i<4;i++){await page.getByRole('button',{name:'Nach rechts'}).click();await page.waitForTimeout(220)}
+  state=await page.evaluate(()=>window.etariumDiagnostics.getState());
+  if(state.x<=x)throw Error('Player failed to move');
+  await page.getByRole('button',{name:'Zurück zum Start'}).click();
+  if(!(await page.locator('#j-continue').isEnabled()))throw Error('Save missing');
+  await page.locator('#j-continue').click();
+  const resumed=await page.evaluate(()=>window.etariumDiagnostics.getState());
+  if(resumed.stage!=='world'||resumed.character.name!=='Arin'||resumed.x!==state.x)throw Error('Resume failed');
+  if(errors.length)throw Error('Browser errors '+errors.join('; '));
+  await page.screenshot({path:'etarium-j-browser.png',fullPage:true});
+  console.log(JSON.stringify({PASS:true,character:resumed.character,position:resumed.x,stage:resumed.stage},null,2));
+  await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
