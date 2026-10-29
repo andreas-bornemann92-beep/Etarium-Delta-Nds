@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#171b29"><title>Etarium Mobile Q – Freigegebener Charakter</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#101420;color:white;font:15px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+main{max-width:620px;margin:auto;padding:12px 12px max(14px,env(safe-area-inset-bottom))}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:24px;letter-spacing:3px;color:#f3a9b5;margin:7px 0}
+small{color:#a9b6c9}#viewport{width:100%;aspect-ratio:4/3;border:3px solid #b84c61;border-radius:13px;overflow:hidden;background:#356b62;touch-action:none}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+#status{margin:10px 0;min-height:35px;text-align:center;color:#cfe8d2}
+#hud{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:5px}
+button{border:1px solid #7789a3;background:#364960;border-radius:11px;color:#fff;font-weight:800;font-size:21px;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad button:nth-child(1){grid-area:1/2}.pad button:nth-child(2){grid-area:2/1}.pad button:nth-child(3){grid-area:2/3}.pad button:nth-child(4){grid-area:3/2}
+button:active,.held{background:#cc6177}
+.actions{display:grid;gap:12px}.actions button{padding:13px;font-size:16px;background:#793447}.actions #start{background:#226d52}
+footer{text-align:center;color:#91a4bc;font-size:12px;line-height:1.5;margin:13px 0}
+
+header{padding:6px 10px 12px;border-bottom:1px solid #5f4551;margin-bottom:10px}
+h1{font-family:Georgia,serif;text-shadow:0 2px 10px #7a263c;letter-spacing:4px}
+#viewport{border:3px solid #a75b65;box-shadow:0 12px 28px #0008,0 0 0 1px #efab9540;background:#426f64}
+#status{background:#1f2a38;border:1px solid #6c4659;border-radius:9px;padding:9px 12px;color:#f1d5af;text-align:left}
+#hud{background:#1b2635;border:1px solid #3d5264;padding:13px;border-radius:13px;box-shadow:0 7px 20px #0004}
+button{transition:background-color .12s,transform .1s}
+button:active{transform:scale(.96)}
+.actions button{background:linear-gradient(140deg,#963e52,#632d42);border-color:#d08e90}
+.actions #start{background:linear-gradient(140deg,#31836a,#195b4c)}
+footer{color:#bdc6cf}
+#view-info{margin:8px 2px;font-size:12px;color:#e9c9a5;display:flex;justify-content:space-between}
+#view-info strong{font-weight:600}
+
+/* Mobile Q: compact handheld controller, responsive to narrow iPhone screens */
+main{max-width:560px;padding:8px 10px max(10px,env(safe-area-inset-bottom))}
+header{margin:0 0 9px;padding:2px 5px 8px}
+header h1{font-size:22px;margin:3px}
+header small{font-size:12px}
+#viewport{aspect-ratio:4/3}
+#status{font-size:12px;margin:8px 0;padding:8px 10px;text-align:center;min-height:0}
+#hud{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;justify-items:center;min-height:165px;gap:3px;padding:10px 6px;border-color:#3c465a}
+#hud button{touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.pad{width:138px;height:138px;display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px);gap:0;filter:drop-shadow(0 5px 4px #080b13a0)}
+.pad button{width:46px;height:46px;background:#313d4f;border:1px solid #536176;border-radius:5px;font-size:19px}
+.pad button:first-child{grid-area:1/2;border-radius:9px 9px 3px 3px}
+.pad button:nth-child(2){grid-area:2/1;border-radius:9px 3px 3px 9px}
+.pad button:nth-child(4){grid-area:2/3;border-radius:3px 9px 9px 3px}
+.pad button:nth-child(5){grid-area:3/2;border-radius:3px 3px 9px 9px}
+.dpad-center{grid-area:2/2;background:#253347;box-shadow:inset 0 0 0 3px #3b4a5e}
+.system-controls{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;align-self:end;margin-bottom:7px}
+.system-controls button{font-size:10px;letter-spacing:.5px;padding:7px 9px;border-radius:20px;min-width:60px;min-height:29px;background:#384657;border:1px solid #75849c;transform:rotate(-11deg)}
+.ab-controls{width:124px;height:136px;position:relative;filter:drop-shadow(0 5px 4px #080b13a0)}
+.ab-controls button{position:absolute;width:60px;height:60px;border-radius:50%;font-size:24px;color:#fff;border:2px solid #e6a7a5;box-shadow:inset 0 -5px 0 #0003}
+#action-b{bottom:10px;left:0;background:#5264aa;border-color:#9bace1}
+#action-a{top:12px;right:0;background:#a93f57}
+#game-panel[hidden]{display:none}
+#game-panel{margin-top:9px;background:#202b3c;border:1px solid #a15b6c;border-radius:13px;padding:13px;text-align:center;color:#eee5dc}
+#game-panel h2{font-family:Georgia,serif;font-size:19px;color:#efcba9;margin:4px}
+#game-panel p{font-size:13px;line-height:1.5}
+#panel-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#panel-actions button{padding:9px 12px;font-size:13px;border-radius:8px;background:#803f52}
+footer{font-size:10px;margin:8px 0}
+@media(max-width:390px){
+ #hud{padding:7px 3px;min-height:144px}
+ .pad{width:114px;height:114px;grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,38px)}
+ .pad button{width:38px;height:38px;font-size:15px}
+ .ab-controls{width:100px;height:118px}
+ .ab-controls button{width:51px;height:51px}
+ .system-controls button{min-width:54px;padding:6px}
+}
+#boot-error[hidden]{display:none}#boot-error{background:#442630;border:2px solid #e2ad80;border-radius:12px;padding:12px;margin:10px 0;color:#fff3e4}#boot-error p{font-size:13px;overflow-wrap:anywhere;line-height:1.5}#boot-retry{padding:9px 14px;font-size:14px;background:#8a4b45}#status{font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<header><h1>ETARIUM <small>Q</small></h1><small>Eichenbrunn · Stadtedition</small></header>
+<div id="viewport"><canvas id="game" width="512" height="384" aria-label="Etarium Spielwelt"></canvas></div>
+
+<p id="status" role="status">Eichenbrunn</p>
+<div id="boot-error" hidden role="alert"><strong>Etarium-Startfehler</strong><p id="boot-error-message"></p><button id="boot-retry" type="button">Spiel neu laden</button></div>
+<div id="hud" aria-label="Spielsteuerung">
+<div class="pad" aria-label="Steuerkreuz">
+<button data-dir="up" aria-label="Nach oben">▲</button>
+<button data-dir="left" aria-label="Nach links">◀</button>
+<div class="dpad-center" aria-hidden="true"></div>
+<button data-dir="right" aria-label="Nach rechts">▶</button>
+<button data-dir="down" aria-label="Nach unten">▼</button>
+</div>
+<div class="system-controls"><button id="select" aria-label="Select">SELECT</button><button id="start" aria-label="Start">START</button></div>
+<div class="ab-controls"><button id="action-b" aria-label="B">B</button><button id="action-a" aria-label="A">A</button></div>
+</div>
+<div id="game-panel" hidden role="dialog" aria-label="Spielmenü">
+<h2 id="panel-title"></h2><p id="panel-body"></p>
+<div id="panel-actions"></div>
+</div>
+<footer>A · INTERAGIEREN &nbsp; B · RENNEN/ZURÜCK &nbsp; KAEL · TESTKAMPF</footer>
+</main>
+<script>
+(function(){
+ window.etariumBootErrors=[];
+ window.etariumFatal=function(err,phase){
+  var message=(err&&err.message)||String(err||'Unbekannter Fehler');
+  window.etariumBootErrors.push({phase:phase||'Start',message:message,stack:err&&err.stack||''});
+  var box=document.getElementById('boot-error');
+  var detail=document.getElementById('boot-error-message');
+  if(box&&detail){box.hidden=false;detail.textContent=(phase||'Spielstart')+': '+message;}
+  var status=document.getElementById('status');if(status)status.textContent='Startproblem erkannt – Fehlerdetails unten.';
+  console.error('[Etarium P]',phase,err);
+ };
+ window.addEventListener('error',function(e){window.etariumFatal(e.error||e.message,'JavaScript')});
+ window.addEventListener('unhandledrejection',function(e){window.etariumFatal(e.reason,'Asynchrone Aufgabe')});
+ document.getElementById('boot-retry').addEventListener('click',function(){location.reload()});
+})();
+</script>
+<script src="g/character_assets.js?v=q1"></script>
+<script src="q/town.js?v=q1"></script>
+<script src="q/npcs.js?v=q1"></script>
+<script src="q/battle.js?v=q1"></script>
+<script src="q/character_flow.js?v=q1"></script>
+<script>
+(function(){
+try{
+"use strict";
+var canvas=document.getElementById('game'),g=canvas.getContext('2d');
+var status=document.getElementById('status'),town=window.ETARIUM_TOWN,T=32,W=town.W,H=town.H,VW=512,VH=384;
+if(!town||!window.ETARIUM_NPCS||!window.ETARIUM_BATTLE||!window.initCharacterFlow)throw Error('Spielmodule nicht vollständig geladen: Stadt, NPCs, Kampf oder Editor');
+var world=town.world,player={x:town.spawn.x,y:town.spawn.y,fromX:town.spawn.x,fromY:town.spawn.y,toX:town.spawn.x,toY:town.spawn.y,face:'up'},cam={x:0,y:0};
+var running=false,walking=false,walkStart=0,duration=185,steps=0,held=null,nextMove=0,stepCycle=0;
+var renderFrames=0,lastFrameTime=0;
+var npcs=window.ETARIUM_NPCS,battle=window.ETARIUM_BATTLE,sprinting=false,selectTab='character',flowManager=null,gamePanel=document.getElementById('game-panel'),panelTitle=document.getElementById('panel-title'),panelBody=document.getElementById('panel-body'),panelActions=document.getElementById('panel-actions'),panelMode=null;
+function clamp(n,a,b){return Math.min(b,Math.max(a,n))}
+function solid(x,y){return town.solid(x,y)}
+function setMessage(s){status.textContent=s}
+function reset(start){
+ player={x:town.spawn.x,y:town.spawn.y,fromX:town.spawn.x,fromY:town.spawn.y,toX:town.spawn.x,toY:town.spawn.y,face:'up'};
+ cam.x=clamp(player.x*T-VW/2,0,W*T-VW);cam.y=clamp(player.y*T-VH/2,0,H*T-VH);
+ steps=0;walking=false;held=null;sprinting=false;nextMove=0;stepCycle=0;running=start;
+ if(start){npcs.reset();battle.leave()}
+ document.querySelectorAll('[data-dir]').forEach(function(b){b.classList.remove('held')});
+ setMessage(start?'Eichenbrunn · Südtor':'Eichenbrunn');hidePanel();
+}
+function attempt(dir,time){
+ if(!running||walking||panelMode||battle.state.active)return false;
+ var dx=dir==='left'?-1:dir==='right'?1:0,dy=dir==='up'?-1:dir==='down'?1:0;
+ player.face=dir;
+ if(solid(player.x+dx,player.y+dy)||npcs.occupied(player.x+dx,player.y+dy))return false;
+ player.fromX=player.x;player.fromY=player.y;
+ player.toX=player.x+dx;player.toY=player.y+dy;
+ player.x=player.toX;player.y=player.toY;
+ walking=true;walkStart=time;duration=sprinting?108:185;steps++;stepCycle=(stepCycle+1)%4;if(flowManager)flowManager.save();return true;
+}
+function rect(x,y,w,h,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h)}
+function tile(t,sx,sy,xx,yy,time){town.drawTile(g,t,sx,sy,xx,yy,time)}
+var sprites={},spriteReady=false;
+var assetData=window.ETARIUM_CHARACTER_ASSETS||{};
+['down','up','right'].forEach(function(name){
+ var image=new Image();
+ image.onload=function(){spriteReady=true};
+ image.src=assetData[name]||'';
+ sprites[name]=image;
+});
+
+var animationFrames={down:[],up:[],right:[]},frameCount=0;
+function createWalkFrames(image,dir){
+ var results=[],phases=6;
+ for(var i=0;i<phases;i++){
+  var canvasFrame=document.createElement('canvas');canvasFrame.width=40;canvasFrame.height=104;
+  var c=canvasFrame.getContext('2d');c.imageSmoothingEnabled=true;
+  if(i===0){c.drawImage(image,0,0);results.push(canvasFrame);continue}
+  var t=i/phases,stride=Math.sin(t*Math.PI*2),swing=Math.round(3.8*stride);
+  var bob=Math.round(Math.abs(Math.sin(t*Math.PI*2))*1);
+  // Preserve head and original costume artwork; separately shift legs and arms.
+  c.drawImage(image,0,0,40,63,0,bob,40,63);
+  if(dir==='right'){
+   c.drawImage(image,0,61,40,43,swing,61-bob,40,43);
+  }else{
+   c.drawImage(image,0,60,20,44,swing,60-bob,20,44);
+   c.drawImage(image,20,60,20,44,20-swing,60+bob,20,44);
+  }
+  // Small alternating arm motion with waist stabilization.
+  c.drawImage(image,0,32,8,32,-Math.round(stride*1.6),32+bob,8,32);
+  c.drawImage(image,32,32,8,32,32+Math.round(stride*1.6),32-bob,8,32);
+  c.drawImage(image,8,52,24,12,8,52+bob,24,12);
+  results.push(canvasFrame);
+ }
+ return results;
+}
+['down','up','right'].forEach(function(dir){
+ var img=sprites[dir];
+ img.addEventListener('load',function(){
+  animationFrames[dir]=createWalkFrames(img,dir);
+  frameCount=animationFrames.down.length+animationFrames.up.length+animationFrames.right.length;
+ });
+ if(img.complete&&img.naturalWidth){
+  animationFrames[dir]=createWalkFrames(img,dir);
+  frameCount=animationFrames.down.length+animationFrames.up.length+animationFrames.right.length;
+ }
+});
+var femaleCache={};
+function femaleFrame(dir,phase,color,hair){
+ var key=[dir,phase,color,hair].join(':');
+ if(femaleCache[key])return femaleCache[key];
+ var cn=document.createElement('canvas');cn.width=40;cn.height=104;
+ var c=cn.getContext('2d');
+ function r(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
+ var pace=[0,2,3,0,-2,-3][phase]||0,bounce=phase%2?-1:0;
+ // Original class-neutral outfit palette: linen shirt, brown trousers and boots.
+ r(10-pace,70,9,23,'#65594a');r(21+pace,70,9,23,'#65594a');
+ r(9-pace,90,10,13,'#4d3629');r(21+pace,90,10,13,'#4d3629');
+ r(7,35+bounce,26,38,'#e7d8bb');r(9,68,22,9,'#795d45');
+ r(4+pace,43,5,25,'#e7bd9b');r(31-pace,43,5,25,'#e7bd9b');
+ r(11,13+bounce,18,24,'#efc49e');r(9,9+bounce,22,14,color);
+ if(hair==='1'){r(8,20,5,24,color);r(27,20,5,24,color)}
+ if(hair==='2'){r(7,8,26,9,color);r(13,5,14,9,color)}
+ if(hair==='3'){r(6,17,5,38,color);r(29,17,5,38,color)}
+ if(dir==='down'){r(16,27+bounce,2,2,'#27202b');r(24,27+bounce,2,2,'#27202b')}
+ else if(dir==='right'){r(26,28+bounce,3,2,'#27202b')}
+ r(9,37+bounce,22,4,'#c2b293');
+ femaleCache[key]=cn;return cn;
+}
+function hero(x,y,time){
+ var direction=(player.face==='left'||player.face==='right')?'right':player.face;
+ var src=sprites[direction],frames=animationFrames[direction];
+ var progress=walking?clamp((time-walkStart)/duration,0,1):0;
+ // Six continuous gait phases; idle keeps the original approved portrait.
+ var phase=walking?Math.min(5,Math.floor(progress*6)):0;
+ var image=frames&&frames[phase]?frames[phase]:src;
+ var chosen=flowManager?flowManager.getCharacter():null;
+ if(chosen&&chosen.gender==='female')image=femaleFrame(direction,phase,chosen.haircolor,chosen.hair);
+ var lift=walking?-(Math.sin(progress*Math.PI*3)**2)*(sprinting?1.7:1.15):0;
+ var width=34,height=78;
+ if(chosen){width={slim:30,normal:34,strong:39,full:43}[chosen.body]||34;
+ height={small:67,medium:78,tall:87}[chosen.height]||78}
+ var left=Math.round(x+16-width/2),top=Math.round(y+32-height+lift);
+ rect(x+4,y+27,23,4,'rgba(21,40,32,0.28)');
+ if(!image||!(image.width||image.naturalWidth))return;
+ g.save();
+ g.translate(left+width/2,top+height*0.74);
+ if(player.face==='right')g.scale(-1,1);
+ g.drawImage(image,-width/2,-height*0.74,width,height);
+ g.restore();
+}
+function render(time){
+ renderFrames++;lastFrameTime=time;
+ if(battle.state.active){battle.draw(g,VW,VH,time);requestAnimationFrame(safeRender);return}
+ var progress=walking?clamp((time-walkStart)/duration,0,1):1;
+ if(walking&&progress>=1)walking=false;
+ var xx=walking?player.fromX+(player.toX-player.fromX)*progress:player.x;
+ var yy=walking?player.fromY+(player.toY-player.fromY)*progress:player.y;
+ var desiredX=clamp(xx*T+T/2-VW/2,0,W*T-VW);
+ var desiredY=clamp(yy*T+T/2-VH/2,0,H*T-VH);
+ cam.x+=(desiredX-cam.x)*0.12;cam.y+=(desiredY-cam.y)*0.12;
+ g.clearRect(0,0,VW,VH);
+ var fromX=Math.max(0,Math.floor(cam.x/T)),fromY=Math.max(0,Math.floor(cam.y/T));
+ for(var y=fromY;y<Math.min(H,fromY+14);y++)for(var x=fromX;x<Math.min(W,fromX+18);x++){
+ tile(world[y][x],x*T-cam.x,y*T-cam.y,x,y,time);
+ }
+ town.drawScenery(g,cam.x,cam.y,time);
+ npcs.update(time,!running||!!panelMode,player.x,player.y);
+ npcs.draw(g,cam,time);
+ hero(xx*T-cam.x,yy*T-cam.y,time);
+ rect(8,8,224,32,'rgba(19,28,38,0.88)');
+ g.fillStyle='#ffffff';g.font='bold 13px system-ui';g.fillText('Eichenbrunn  ·  Schritte '+steps,16,28);
+ if(!running){rect(54,151,404,70,'rgba(17,20,30,0.88)');g.fillStyle='#fff';g.font='bold 22px system-ui';g.fillText('ETARIUM MOBILE Q',140,183);g.font='14px system-ui';g.fillText('Neues Spiel starten',191,206)}
+ if(held&&running&&!walking&&!panelMode&&time>=nextMove){attempt(held,time);nextMove=time+(sprinting?105:175)}
+ requestAnimationFrame(safeRender);
+}
+function safeRender(t){try{render(t)}catch(e){window.etariumFatal(e,'Zeichnen der Spielwelt')}}
+function hidePanel(){gamePanel.hidden=true;panelMode=null;release();}
+function showPanel(mode,title,body,buttons){
+ release();panelMode=mode;gamePanel.hidden=false;
+ panelTitle.textContent=title;panelBody.textContent=body;
+ panelActions.replaceChildren();
+ (buttons||[{label:'Schließen',fn:hidePanel}]).forEach(function(item){
+  var b=document.createElement('button');b.textContent=item.label;
+  b.addEventListener('click',item.fn);panelActions.appendChild(b);
+ });
+}
+function interact(){
+ if(flowManager&&flowManager.getStage()==='editor'){document.getElementById('j-confirm').click();return;}
+ if(flowManager&&flowManager.getStage()==='title'){document.getElementById('j-new').click();return;}
+ if(flowManager&&flowManager.getStage()!=='world')return;
+ if(panelMode){var confirm=panelActions.querySelector('button');if(confirm)confirm.click();else hidePanel();return;}
+ if(battle.state.active){setMessage('Kampfsimulation – B: zurück zur Stadt');return}
+ var actor=npcs.nearby(player.x,player.y,2);
+ if(actor){
+  if(actor.role==='battle'){
+    showPanel('challenge','Kael · Herausforderung','Willst du einen Trainingskampf beginnen? Der Kampf ist zunächst eine visuelle Simulation.',[
+      {label:'Kampf beginnen',fn:function(){hidePanel();battle.enter(actor.name,performance.now());release();setSprint(false);setMessage('Kampfvorschau · B zum Verlassen')}},
+      {label:'Nicht jetzt',fn:hidePanel}
+    ]);
+  }else if(actor.role==='dialog'){
+    showPanel('dialog',actor.name,actor.line,[{label:'Weiter',fn:function(){showPanel('dialog',actor.name,'Wenn du den Marktplatz suchst, folge der Hauptstraße nach Norden.')}}]);
+  }else if(actor.role==='routine'){
+    showPanel('dialog',actor.name,'Ich kontrolliere regelmäßig den Platz. Meine Runde führt mich über sechs Wegpunkte.');
+  }else if(actor.role==='query'){
+    showPanel('dialog',actor.name,'Ich beobachte den Zustand des Marktbrunnens.',[
+      {label:'Nach Ergebnis fragen',fn:function(){showPanel('queryResult','Brunnenprüfung',npcs.query())}},
+      {label:'Zurück',fn:hidePanel}
+    ]);
+  }
+  return;
+ }
+ var landmarks=[
+  {name:'Gasthaus',x:12,y:12,w:9,h:8},
+  {name:'Laden',x:33,y:12,w:9,h:8},
+  {name:'Wohnhaus',x:9,y:25,w:9,h:6},
+  {name:'Wohnhaus',x:35,y:25,w:9,h:6},
+  {name:'Brunnenplatz',x:24,y:16,w:5,h:5},
+  {name:'Südtor',x:24,y:29,w:6,h:4}
+ ];
+ var nearest=null,distance=999;
+ landmarks.forEach(function(p){
+  var d=Math.abs(player.x-p.x)+Math.abs(player.y-p.y);
+  if(d<distance){nearest=p;distance=d}
+ });
+ if(distance<=5){
+  var desc=nearest.name==='Gasthaus'?'Eine warme Herberge. Die Tür wird in einer späteren Version begehbar.':
+   nearest.name==='Laden'?'Hier wird später ein Händler seine Waren anbieten.':
+   nearest.name==='Brunnenplatz'?'Das Wasser glitzert im Brunnen von Eichenbrunn.':
+   nearest.name==='Südtor'?'Du stehst am Eingang der Stadt Eichenbrunn.':'Ein kleines Wohnhaus von Eichenbrunn.';
+  showPanel('dialog',nearest.name,desc);
+ }else showPanel('dialog','Umgebung','Hier gibt es gerade nichts zu untersuchen.');
+}
+function actionB(){
+ if(panelMode){hidePanel();return}
+ if(battle.state.active){battle.leave();setMessage('Eichenbrunn · Südtor');return}
+ if(flowManager&&flowManager.getStage()==='editor'){
+  document.getElementById('j-back').click();return;
+ }
+}
+function setSprint(enabled){
+ sprinting=!!enabled;
+ document.getElementById('action-b').classList.toggle('held',sprinting);
+}
+function actionStart(){
+ if(!flowManager||flowManager.getStage()!=='world')return;
+ if(battle.state.active){setMessage('Kampfvorschau · B beendet die Simulation');return}
+ if(panelMode==='start'){hidePanel();return}
+ showPanel('start','Spielmenü','Du bist in Eichenbrunn.',[
+  {label:'Fortsetzen',fn:hidePanel},
+  {label:'Speichern',fn:function(){flowManager.save();showPanel('dialog','Gespeichert','Dein Spielstand wurde lokal auf diesem Gerät gespeichert.');}},
+  {label:'Zum Titelbildschirm',fn:function(){hidePanel();flowManager.openMenu()}}
+ ]);
+}
+function showSelectTab(tab){
+ selectTab=tab;
+ var ch=flowManager.getCharacter();
+ var characterText=ch.name+' · '+(ch.gender==='male'?'Männlich':'Weiblich')+' · Körperbau: '+ch.body+' · Größe: '+ch.height+' · Eichenbrunn';
+ var spiritText='Geister: 0 / 10. Noch keine Geister im Team. Die Geisterverwaltung folgt als Entwicklungsmodul.';
+ showPanel('select',tab==='spirits'?'Geister':'Charakter',tab==='spirits'?spiritText:characterText,[
+  {label:'Charakter',fn:function(){showSelectTab('character')}},
+  {label:'Geister',fn:function(){showSelectTab('spirits')}},
+  {label:'Zurück',fn:hidePanel}
+ ]);
+}
+function actionSelect(){
+ if(!flowManager||flowManager.getStage()!=='world'||battle.state.active)return;
+ if(panelMode==='select'){hidePanel();return}
+ showSelectTab('character');
+}
+function hold(dir){held=dir;nextMove=0;document.querySelectorAll('[data-dir]').forEach(function(b){b.classList.toggle('held',b.getAttribute('data-dir')===dir)})}
+function release(){held=null;document.querySelectorAll('[data-dir]').forEach(function(b){b.classList.remove('held')})}
+document.querySelectorAll('[data-dir]').forEach(function(el){
+ el.addEventListener('pointerdown',function(e){e.preventDefault();hold(el.getAttribute('data-dir'));if(el.setPointerCapture)el.setPointerCapture(e.pointerId)});
+ el.addEventListener('pointerup',release);el.addEventListener('pointercancel',release);el.addEventListener('lostpointercapture',release);
+ el.addEventListener('click',function(){if(running&&!walking)attempt(el.getAttribute('data-dir'),performance.now())});
+});
+document.getElementById('action-a').addEventListener('click',interact);
+var bControl=document.getElementById('action-b');
+bControl.addEventListener('pointerdown',function(e){
+ e.preventDefault();
+ if(panelMode||flowManager&&flowManager.getStage()==='editor'){actionB();return}
+ if(flowManager&&flowManager.getStage()==='world'&&!battle.state.active){setSprint(true);if(bControl.setPointerCapture)bControl.setPointerCapture(e.pointerId)}
+});
+['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){
+ bControl.addEventListener(ev,function(){setSprint(false)});
+});
+bControl.addEventListener('click',function(){
+ if(panelMode||battle.state.active||flowManager&&flowManager.getStage()==='editor')actionB();
+});
+document.getElementById('start').addEventListener('click',actionStart);
+document.getElementById('select').addEventListener('click',actionSelect);
+window.addEventListener('keydown',function(e){var dirs={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};if(dirs[e.key]){e.preventDefault();hold(dirs[e.key])}});
+window.addEventListener('keyup',function(e){if(e.key.startsWith('Arrow'))release()});
+window.addEventListener('blur',function(){release();setSprint(false)});
+window.addEventListener('keydown',function(e){if(e.key==='Enter')actionStart();else if(e.key==='Escape')actionB();else if(e.key==='Shift')setSprint(true);else if(e.key===' '){e.preventDefault();interact()}});
+window.addEventListener('keyup',function(e){if(e.key==='Shift')setSprint(false)});
+window.etariumDiagnostics={getState:function(){return {running:running,x:player.x,y:player.y,steps:steps,cameraX:cam.x,cameraY:cam.y,walking:walking,facing:player.face,stepCycle:stepCycle,animationFrames:frameCount,renderFrames:renderFrames,lastFrameTime:lastFrameTime,bootErrors:window.etariumBootErrors.slice(),npcs:npcs.getState(),battle:battle.getState(),npcResult:npcs.getResult(),location:'Eichenbrunn',panel:panelMode,sprinting:sprinting,selectTab:selectTab,moveDuration:duration,stage:flowManager?flowManager.getStage():'boot',character:flowManager?flowManager.getCharacter():null}},start:function(){reset(true)},move:function(d){return attempt(d,performance.now())}};
+reset(false);
+flowManager=window.initCharacterFlow({
+ startFresh:function(){reset(true)},
+ validateStart:function(){return !!(running&&npcs&&town&&player&&canvas&&g&&window.etariumBootErrors.length===0)},
+ afterStart:function(){setMessage('Eichenbrunn · Kael erwartet dich am Südtor')},
+ reportError:function(e,phase){window.etariumFatal(e,phase)},
+ stop:function(){running=false;held=null;walking=false;setSprint(false);battle.leave()},
+ getPosition:function(){return {x:player.x,y:player.y,steps:steps}},
+ restore:function(data){
+  if(Number.isInteger(data.x)&&Number.isInteger(data.y)&&!solid(data.x,data.y)){
+   player.x=data.x;player.y=data.y;
+   player.fromX=data.x;player.fromY=data.y;player.toX=data.x;player.toY=data.y;
+   steps=Number.isInteger(data.steps)?data.steps:0;
+  }
+ }
+});
+requestAnimationFrame(safeRender);
+}catch(err){window.etariumFatal(err,'Initialisierung')}
+})();
+</script>
+</body></html>
