@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#181a25"><title>Etarium Mobile – Spieltest</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#121722;color:#fff;font:16px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}main{max-width:580px;margin:auto;padding:14px}h1{color:#f7adba;text-align:center;letter-spacing:3px;margin:8px}#frame{border:3px solid #b84b5e;border-radius:12px;overflow:hidden;aspect-ratio:4/3;background:#446a59}canvas{width:100%;height:100%;display:block;image-rendering:pixelated}#message{min-height:50px;text-align:center;padding:12px;color:#ffe5bf;font-weight:600}.controls{display:flex;justify-content:space-between;align-items:center;gap:10px;touch-action:manipulation}.pad{display:grid;grid-template:repeat(3,54px)/repeat(3,54px);gap:5px}.pad button:nth-child(1){grid-area:1/2}.pad button:nth-child(2){grid-area:2/1}.pad button:nth-child(3){grid-area:2/3}.pad button:nth-child(4){grid-area:3/2}button{border:1px solid #a9bac6;border-radius:10px;background:#36465b;color:#fff;font-weight:800;font-size:22px;touch-action:manipulation}.action{display:grid;gap:10px}.action button{font-size:16px;background:#943448;padding:13px}#start{background:#29754b}#info{text-align:center;color:#d5d8e1;font-size:13px}#status{text-align:center;font-size:14px;color:#adeab6}
+</style></head><body><main><h1>ETARIUM</h1><p id="status">Mobilversion E · Bereit</p><div id="frame"><canvas id="map" width="512" height="384"></canvas></div><div id="message" role="status">Rote Figur sichtbar. Tippe auf „Neues Spiel“.</div><div class="controls"><div class="pad"><button data-dir="up" aria-label="Hoch">▲</button><button data-dir="left" aria-label="Links">◀</button><button data-dir="right" aria-label="Rechts">▶</button><button data-dir="down" aria-label="Runter">▼</button></div><div class="action"><button id="start">Neues Spiel</button><button id="reset">Zum Menü</button></div></div><p id="info">Touch-Steuerung • 16 × 12 Karte • Läuft im Safari-Browser</p></main>
+<script>
+(function(){
+"use strict";
+var map=["################","#..............#","#..~~~~........#","#..~~~~...##...#","#.........##...#","#..............#","#.....####.....#","#..............#","#...~~~........#","#...~~~........#","#..............#","################"];
+var canvas=document.getElementById("map"),c=canvas.getContext("2d");
+var player={x:2,y:5,steps:0},active=false;
+function rect(x,y,w,h,color){c.fillStyle=color;c.fillRect(x,y,w,h)}
+function paint(){
+ if(!c)return;
+ for(var y=0;y<12;y++)for(var x=0;x<16;x++){var t=map[y][x],px=x*32,py=y*32;
+ rect(px,py,32,32,t==="#"?"#495365":t==="~"?"#2385b2":(x+y)%2?"#70b866":"#66aa58");
+ if(t==="#")rect(px+2,py+3,28,5,"#788697");
+ if(t==="~")rect(px+4,py+13,17,3,"#74dcf0");
+ }
+ var a=player.x*32,b=player.y*32;
+ rect(a+8,b+26,16,5,"#272631");rect(a+7,b+14,18,13,"#b12448");
+ rect(a+10,b+5,13,12,"#f0bc93");rect(a+9,b+3,15,6,"#312b38");
+ rect(a+12,b+13,2,2,"#121b24");rect(a+21,b+13,2,2,"#121b24");
+ c.strokeStyle="#ffffff";c.lineWidth=2;c.strokeRect(a+5,b+2,23,28);
+ document.getElementById("status").textContent="Mobilversion E · Position "+player.x+"/"+player.y+" · Schritte "+player.steps;
+}
+function msg(s){document.getElementById("message").textContent=s}
+function start(){active=true;player={x:2,y:5,steps:0};paint();msg("Spiel läuft – bewege die rote Figur!")}
+function move(dir){
+ if(!active){msg("Zuerst Neues Spiel tippen.");return}
+ var dx=dir==="left"?-1:dir==="right"?1:0,dy=dir==="up"?-1:dir==="down"?1:0;
+ var x=player.x+dx,y=player.y+dy;
+ if(x>=0&&x<16&&y>=0&&y<12&&map[y][x]==="."){player.x=x;player.y=y;player.steps++;paint();msg("Bewegung erfolgreich");}
+ else msg("Hier ist der Weg versperrt");
+}
+document.getElementById("start").addEventListener("click",start);
+document.getElementById("reset").addEventListener("click",function(){active=false;paint();msg("Menü – Neues Spiel drücken")});
+document.querySelectorAll("[data-dir]").forEach(function(el){el.addEventListener("click",function(){move(el.getAttribute("data-dir"))})});
+document.addEventListener("keydown",function(e){var dirs={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right"};if(dirs[e.key]){e.preventDefault();move(dirs[e.key])}});
+paint();
+window.etariumTest={start:start,move:move,getState:function(){return {x:player.x,y:player.y,steps:player.steps,active:active}}};
+})();
+</script></body></html>
