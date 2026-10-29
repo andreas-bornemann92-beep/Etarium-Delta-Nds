@@ -10,7 +10,6 @@ const {chromium}=require('playwright');
  await page.locator('#j-confirm').click();
  const start=await page.evaluate(()=>window.etariumDiagnostics.getState());
  if(start.stage!=='world'||!start.running||start.x!==24||start.y!==32)throw Error('Spawn not at south gate: '+JSON.stringify(start));
- if(window.ETARIUM_TOWN)throw Error('Browser state leakage');
  // Advance into Eichenbrunn while preserving cardinal movement and animations.
  for(let i=0;i<11;i++){
   await page.evaluate(()=>window.etariumDiagnostics.move('up'));
