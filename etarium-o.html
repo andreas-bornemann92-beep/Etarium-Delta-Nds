@@ -104,7 +104,7 @@ var canvas=document.getElementById('game'),g=canvas.getContext('2d');
 var status=document.getElementById('status'),town=window.ETARIUM_TOWN,T=32,W=town.W,H=town.H,VW=512,VH=384;
 var world=town.world,player={x:town.spawn.x,y:town.spawn.y,fromX:town.spawn.x,fromY:town.spawn.y,toX:town.spawn.x,toY:town.spawn.y,face:'up'},cam={x:0,y:0};
 var running=false,walking=false,walkStart=0,duration=185,steps=0,held=null,nextMove=0,stepCycle=0;
-var sprinting=false,selectTab='character',flowManager=null,gamePanel=document.getElementById('game-panel'),panelTitle=document.getElementById('panel-title'),panelBody=document.getElementById('panel-body'),panelActions=document.getElementById('panel-actions'),panelMode=null;
+var npcs=window.ETARIUM_NPCS,sprinting=false,selectTab='character',flowManager=null,gamePanel=document.getElementById('game-panel'),panelTitle=document.getElementById('panel-title'),panelBody=document.getElementById('panel-body'),panelActions=document.getElementById('panel-actions'),panelMode=null;
 function clamp(n,a,b){return Math.min(b,Math.max(a,n))}
 function solid(x,y){return town.solid(x,y)}
 function setMessage(s){status.textContent=s}
