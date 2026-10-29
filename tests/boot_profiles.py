@@ -17,8 +17,10 @@ profiles=[('direct_software','DirectBoot=1\nConsoleType=0\nScreenUseGL=0\nJIT_En
 results=[]
 for pname,settings in profiles:
     home=out/pname/'home';home.mkdir(parents=True,exist_ok=True)
-    config=home/'melonDS.ini';config.write_text(settings)
+    config=home/'melonDS'/'melonDS.ini';config.parent.mkdir(parents=True,exist_ok=True)
     for name,rom in roms.items():
+        # melonDS persists settings after exit; reset the real Qt configuration before every ROM.
+        config.write_text(settings+'ExternalBIOSEnable=0\n')
         capture=out/pname/(name+'.png')
         capture.parent.mkdir(parents=True,exist_ok=True)
         cmd_script=r'''
@@ -39,7 +41,7 @@ exit 0
         record={'profile':pname,'rom':name,'capture':str(capture.relative_to(out)),
                 'exit_code':run.returncode,'capture_exists':capture.exists(),
                 'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),
-                'configuration':settings}
+                'configuration':settings,'effective_config_path':str(config.relative_to(out))}
         if capture.exists():
             im=Image.open(capture).convert('RGB')
             record['image_sha256']=hashlib.sha256(capture.read_bytes()).hexdigest()
