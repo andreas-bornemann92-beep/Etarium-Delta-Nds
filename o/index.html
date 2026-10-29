@@ -180,7 +180,7 @@ function femaleFrame(dir,phase,color,hair){
  var cn=document.createElement('canvas');cn.width=40;cn.height=104;
  var c=cn.getContext('2d');
  function r(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
- var pace=[0,3,0,-3][phase],bounce=phase%2?-1:0;
+ var pace=[0,2,3,0,-2,-3][phase]||0,bounce=phase%2?-1:0;
  // Original class-neutral outfit palette: linen shirt, brown trousers and boots.
  r(10-pace,70,9,23,'#65594a');r(21+pace,70,9,23,'#65594a');
  r(9-pace,90,10,13,'#4d3629');r(21+pace,90,10,13,'#4d3629');
