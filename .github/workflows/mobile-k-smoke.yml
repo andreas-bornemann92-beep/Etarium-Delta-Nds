@@ -1,0 +1,32 @@
+name: Etarium Mobile K town integration
+on:
+  push:
+    branches: [gh-pages]
+    paths: ['k/**','.github/workflows/mobile-k-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  eichenbrunn:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test browser
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test start point, city entry, blocked houses, editor and save
+        run: |
+          python3 -m http.server 8787 --bind 127.0.0.1 &
+          sleep 2
+          node k/smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: etarium-k-city-browser-evidence
+          path: etarium-k-city.png
+          if-no-files-found: warn
