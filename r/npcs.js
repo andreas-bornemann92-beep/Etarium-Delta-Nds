@@ -3,7 +3,7 @@
 'use strict';
 var actors=[
  {id:'mara',name:'Mara',role:'dialog',x:20,y:24,face:'down',coat:'#926547',hair:'#4e302b',skin:'#e4af8b',line:'Willkommen in Eichenbrunn! Am Brunnenplatz findest du Händler und Reisende.'},
- {id:'toren',name:'Toren',role:'routine',x:30,y:17,face:'right',coat:'#406a83',hair:'#44332b',skin:'#dbad87',route:[[30,17],[31,17],[31,18],[30,18],[29,18],[29,17]],routeStep:0,phase:0,fromX:30,fromY:18,toX:30,toY:18,moving:false,start:0,waitUntil:0},
+ {id:'toren',name:'Toren',role:'routine',x:30,y:17,face:'right',coat:'#406a83',hair:'#44332b',skin:'#dbad87',route:[[30,17],[31,17],[31,18],[30,18],[29,18],[29,17]],routeStep:0,phase:0,fromX:30,fromY:17,toX:30,toY:17,moving:false,start:0,waitUntil:0},
  {id:'elis',name:'Elis',role:'query',x:31,y:23,face:'left',coat:'#7172a0',hair:'#b48a51',skin:'#edc09f'},
  {id:'kael',name:'Kael',role:'battle',x:26,y:27,face:'left',coat:'#844a57',hair:'#302a33',skin:'#ddb495'}
 ];
