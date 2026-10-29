@@ -376,7 +376,7 @@ window.addEventListener('keyup',function(e){if(e.key.startsWith('Arrow'))release
 window.addEventListener('blur',function(){release();setSprint(false)});
 window.addEventListener('keydown',function(e){if(e.key==='Enter')actionStart();else if(e.key==='Escape')actionB();else if(e.key==='Shift')setSprint(true);else if(e.key===' '){e.preventDefault();interact()}});
 window.addEventListener('keyup',function(e){if(e.key==='Shift')setSprint(false)});
-window.etariumDiagnostics={getState:function(){return {running:running,x:player.x,y:player.y,steps:steps,cameraX:cam.x,cameraY:cam.y,walking:walking,facing:player.face,stepCycle:stepCycle,animationFrames:frameCount,location:'Eichenbrunn',panel:panelMode,sprinting:sprinting,selectTab:selectTab,moveDuration:duration,stage:flowManager?flowManager.getStage():'boot',character:flowManager?flowManager.getCharacter():null}},start:function(){reset(true)},move:function(d){return attempt(d,performance.now())}};
+window.etariumDiagnostics={getState:function(){return {running:running,x:player.x,y:player.y,steps:steps,cameraX:cam.x,cameraY:cam.y,walking:walking,facing:player.face,stepCycle:stepCycle,animationFrames:frameCount,renderFrames:renderFrames,lastFrameTime:lastFrameTime,bootErrors:window.etariumBootErrors.slice(),npcs:npcs.getState(),npcResult:npcs.getResult(),location:'Eichenbrunn',panel:panelMode,sprinting:sprinting,selectTab:selectTab,moveDuration:duration,stage:flowManager?flowManager.getStage():'boot',character:flowManager?flowManager.getCharacter():null}},start:function(){reset(true)},move:function(d){return attempt(d,performance.now())}};
 reset(false);
 flowManager=window.initCharacterFlow({
  startFresh:function(){reset(true)},
