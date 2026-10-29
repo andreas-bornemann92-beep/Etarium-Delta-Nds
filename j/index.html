@@ -140,6 +140,28 @@ function createWalkFrames(image,dir) {
   frameCount=animationFrames.down.length+animationFrames.up.length+animationFrames.right.length;
  }
 });
+var femaleCache={};
+function femaleFrame(dir,phase,color,hair){
+ var key=[dir,phase,color,hair].join(':');
+ if(femaleCache[key])return femaleCache[key];
+ var cn=document.createElement('canvas');cn.width=40;cn.height=104;
+ var c=cn.getContext('2d');
+ function r(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
+ var pace=[0,3,0,-3][phase],bounce=phase%2?-1:0;
+ // Original class-neutral outfit palette: linen shirt, brown trousers and boots.
+ r(10-pace,70,9,23,'#65594a');r(21+pace,70,9,23,'#65594a');
+ r(9-pace,90,10,13,'#4d3629');r(21+pace,90,10,13,'#4d3629');
+ r(7,35+bounce,26,38,'#e7d8bb');r(9,68,22,9,'#795d45');
+ r(4+pace,43,5,25,'#e7bd9b');r(31-pace,43,5,25,'#e7bd9b');
+ r(11,13+bounce,18,24,'#efc49e');r(9,9+bounce,22,14,color);
+ if(hair==='1'){r(8,20,5,24,color);r(27,20,5,24,color)}
+ if(hair==='2'){r(7,8,26,9,color);r(13,5,14,9,color)}
+ if(hair==='3'){r(6,17,5,38,color);r(29,17,5,38,color)}
+ if(dir==='down'){r(16,27+bounce,2,2,'#27202b');r(24,27+bounce,2,2,'#27202b')}
+ else if(dir==='right'){r(26,28+bounce,3,2,'#27202b')}
+ r(9,37+bounce,22,4,'#c2b293');
+ femaleCache[key]=cn;return cn;
+}
 function hero(x,y,time){
  var direction=(player.face==='left'||player.face==='right')?'right':player.face;
  var src=sprites[direction],frames=animationFrames[direction];
@@ -147,8 +169,13 @@ function hero(x,y,time){
  // Four distinct source images per step; stand still on the unmodified source.
  var phase=walking?Math.min(3,Math.floor(progress*4)):0;
  var image=frames&&frames[phase]?frames[phase]:src;
+ var chosen=flowManager?flowManager.getCharacter():null;
+ if(chosen&&chosen.gender==='female')image=femaleFrame(direction,phase,chosen.haircolor,chosen.hair);
  var lift=walking&&phase%2===1?-1.5:0;
- var width=34,height=78,left=Math.round(x-1),top=Math.round(y-46+lift);
+ var width=34,height=78;
+ if(chosen){width={slim:30,normal:34,strong:39,full:43}[chosen.body]||34;
+ height={small:67,medium:78,tall:87}[chosen.height]||78}
+ var left=Math.round(x+16-width/2),top=Math.round(y+32-height+lift);
  rect(x+4,y+27,23,4,'rgba(21,40,32,0.28)');
  if(!image||!(image.width||image.naturalWidth))return;
  g.save();
