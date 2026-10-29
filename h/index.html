@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#171b29"><title>Etarium Mobile H – Freigegebener Charakter</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#101420;color:white;font:15px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+main{max-width:620px;margin:auto;padding:12px 12px max(14px,env(safe-area-inset-bottom))}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:24px;letter-spacing:3px;color:#f3a9b5;margin:7px 0}
+small{color:#a9b6c9}#viewport{width:100%;aspect-ratio:4/3;border:3px solid #b84c61;border-radius:13px;overflow:hidden;background:#356b62;touch-action:none}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+#status{margin:10px 0;min-height:35px;text-align:center;color:#cfe8d2}
+#hud{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:5px}
+button{border:1px solid #7789a3;background:#364960;border-radius:11px;color:#fff;font-weight:800;font-size:21px;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad button:nth-child(1){grid-area:1/2}.pad button:nth-child(2){grid-area:2/1}.pad button:nth-child(3){grid-area:2/3}.pad button:nth-child(4){grid-area:3/2}
+button:active,.held{background:#cc6177}
+.actions{display:grid;gap:12px}.actions button{padding:13px;font-size:16px;background:#793447}.actions #start{background:#226d52}
+footer{text-align:center;color:#91a4bc;font-size:12px;line-height:1.5;margin:13px 0}
+</style>
+</head>
+<body>
+<main>
+<header><h1>ETARIUM <small>H</small></h1><small>Mobile · Charakteranimation</small></header>
+<div id="viewport"><canvas id="game" width="512" height="384" aria-label="Etarium Spielwelt"></canvas></div>
+<p id="status" role="status">Startbereit – deine Figur steht in der Spielwelt.</p>
+<div id="hud"><div class="pad" aria-label="Bewegung">
+<button data-dir="up" aria-label="Nach oben">▲</button>
+<button data-dir="left" aria-label="Nach links">◀</button>
+<button data-dir="right" aria-label="Nach rechts">▶</button>
+<button data-dir="down" aria-label="Nach unten">▼</button>
+</div><div class="actions">
+<button id="start">Neues Spiel</button><button id="reset">Zurück zum Start</button>
+</div></div>
+<footer>Korrigierte Blickrichtung · 4-Phasen-Laufanimation · Kameraverfolgung<br>Grundmodell aus deiner freigegebenen Vorlage · Version F bleibt spielbar</footer>
+</main>
+<script src="../g/character_assets.js"></script>
+<script>
+(function(){
+"use strict";
+var canvas=document.getElementById('game'),g=canvas.getContext('2d');
+var status=document.getElementById('status'),T=32,W=40,H=30,VW=512,VH=384;
+var world=[],player={x:6,y:6,fromX:6,fromY:6,toX:6,toY:6,face:'down'},cam={x:0,y:0};
+var running=false,walking=false,walkStart=0,duration=195,steps=0,held=null,nextMove=0,stepCycle=0;
+function clamp(n,a,b){return Math.min(b,Math.max(a,n))}
+function block(x,y){return x===0||y===0||x===W-1||y===H-1}
+function buildWorld(){
+ for(var y=0;y<H;y++){var row=[];for(var x=0;x<W;x++){
+ var t=block(x,y)?'#':'.';
+ if(x>=17&&x<=24&&y>=5&&y<=21)t='~';
+ if(x>=17&&x<=24&&y===13)t='=';
+ if(y>=17&&y<=20&&x>=4&&x<=11)t='^';
+ if(x>=28&&x<=35&&y>=4&&y<=10&&(x+y)%4===0)t='T';
+ if(y===8&&x>=2&&x<=15)t=':';
+ if(x===11&&y>=8&&y<=16)t=':';
+ row.push(t);
+ }world.push(row);}
+}
+buildWorld();
+function solid(x,y){if(x<0||y<0||x>=W||y>=H)return true;return '#~^T'.indexOf(world[y][x])!==-1}
+function setMessage(s){status.textContent=s}
+function reset(start){
+ player={x:6,y:6,fromX:6,fromY:6,toX:6,toY:6,face:'down'};
+ cam.x=clamp(player.x*T-VW/2,0,W*T-VW);cam.y=clamp(player.y*T-VH/2,0,H*T-VH);
+ steps=0;walking=false;held=null;nextMove=0;stepCycle=0;running=start;
+ document.querySelectorAll('[data-dir]').forEach(function(b){b.classList.remove('held')});
+ setMessage(start?'Spiel läuft – halte die Richtungstasten gedrückt.':'Version G – drücke „Neues Spiel“.');
+}
+function attempt(dir,time){
+ if(!running||walking)return false;
+ var dx=dir==='left'?-1:dir==='right'?1:0,dy=dir==='up'?-1:dir==='down'?1:0;
+ player.face=dir;
+ if(solid(player.x+dx,player.y+dy))return false;
+ player.fromX=player.x;player.fromY=player.y;
+ player.toX=player.x+dx;player.toY=player.y+dy;
+ player.x=player.toX;player.y=player.toY;
+ walking=true;walkStart=time;steps++;stepCycle=(stepCycle+1)%4;return true;
+}
+function rect(x,y,w,h,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h)}
+function tile(t,sx,sy,xx,yy){
+ var alt=(xx*13+yy*17)%5;
+ rect(sx,sy,T,T,alt<2?'#6aaf60':'#75b965');
+ rect(sx+3+alt,sy+9,3,2,'#88c574');
+ if(t===':'){rect(sx,sy,T,T,'#d2ba83');rect(sx+3,sy+23,9,3,'#dcca97')}
+ if(t==='#'){rect(sx,sy,T,T,'#526273');rect(sx+2,sy+2,28,8,'#8294a0');rect(sx+2,sy+19,28,4,'#3d4b5a')}
+ if(t==='~'){rect(sx,sy,T,T,alt%2?'#2179ae':'#278ac1');rect(sx+6,sy+12,16,3,'#84d5ed')}
+ if(t==='='){rect(sx,sy,T,T,'#c6a06d');rect(sx,sy+4,32,4,'#895c40');rect(sx,sy+25,32,4,'#895c40')}
+ if(t==='^'){rect(sx,sy,T,T,'#499454');rect(sx+5,sy+13,22,14,'#2d6646');rect(sx+12,sy+5,10,16,'#387c4b')}
+ if(t==='T'){rect(sx+13,sy+17,7,15,'#825739');rect(sx+3,sy+3,26,20,'#245f43');rect(sx+9,sy,16,11,'#3b8c50')}
+}
+var sprites={},spriteReady=false;
+var assetData=window.ETARIUM_CHARACTER_ASSETS||{};
+['down','up','right'].forEach(function(name){
+ var image=new Image();
+ image.onload=function(){spriteReady=true};
+ image.src=assetData[name]||'';
+ sprites[name]=image;
+});
+function hero(x,y,time){
+ // H: approved original art preserved as a whole. No duplicated arm/leg fragments.
+ // Side asset faces LEFT. Flip only when travelling RIGHT.
+ var name=player.face==='left'||player.face==='right'?'right':player.face;
+ var image=sprites[name];
+ var p=walking?clamp((time-walkStart)/duration,0,1):0;
+ var cycle=(stepCycle+p)%4;
+ var gait=walking?Math.sin(cycle*Math.PI/2):0;
+ var lift=walking?Math.abs(Math.sin(cycle*Math.PI/2)):0;
+ var bounce=walking?-1.8*lift:0;
+ var lean=walking?gait*0.018:0;
+ var left=Math.round(x-1),top=Math.round(y-46+bounce),width=34,height=78;
+ rect(x+4,y+27,23,4,'rgba(21,40,32,0.28)');
+ if(!image||!image.complete||!image.naturalWidth){
+   rect(left+11,top+12,12,15,'#e1bd93');
+   rect(left+9,top+29,16,29,'#e8dac2');
+   rect(left+8,top+58,18,20,'#584c42');
+   return;
+ }
+ g.save();
+ // Mirroring applied in the opposite direction to G, fixing reversed facing.
+ g.translate(left+width/2,top+height*0.74);
+ if(player.face==='right')g.scale(-1,1);
+ g.rotate(lean);
+ // Four-stage walk: alternating foot emphasis and short body bounce.
+ // Keep entire approved sprite intact: prevents gaps/disjointed ankles.
+ var sway=walking?gait*1.2:0;
+ g.drawImage(image,-width/2+sway,-height*0.74,width,height);
+ g.restore();
+}
+function render(time){
+ var progress=walking?clamp((time-walkStart)/duration,0,1):1;
+ if(walking&&progress>=1)walking=false;
+ var xx=walking?player.fromX+(player.toX-player.fromX)*progress:player.x;
+ var yy=walking?player.fromY+(player.toY-player.fromY)*progress:player.y;
+ var desiredX=clamp(xx*T+T/2-VW/2,0,W*T-VW);
+ var desiredY=clamp(yy*T+T/2-VH/2,0,H*T-VH);
+ cam.x+=(desiredX-cam.x)*0.18;cam.y+=(desiredY-cam.y)*0.18;
+ g.clearRect(0,0,VW,VH);
+ var fromX=Math.max(0,Math.floor(cam.x/T)),fromY=Math.max(0,Math.floor(cam.y/T));
+ for(var y=fromY;y<Math.min(H,fromY+14);y++)for(var x=fromX;x<Math.min(W,fromX+18);x++){
+ tile(world[y][x],x*T-cam.x,y*T-cam.y,x,y);
+ }
+ hero(xx*T-cam.x,yy*T-cam.y,time);
+ rect(8,8,177,30,'rgba(18,24,34,0.84)');
+ g.fillStyle='#ffffff';g.font='bold 13px system-ui';g.fillText('Position '+player.x+','+player.y+'  Schritte '+steps,16,27);
+ if(!running){rect(54,151,404,70,'rgba(17,20,30,0.88)');g.fillStyle='#fff';g.font='bold 22px system-ui';g.fillText('ETARIUM MOBILE H',140,183);g.font='14px system-ui';g.fillText('Neues Spiel starten',191,206)}
+ if(held&&running&&!walking&&time>=nextMove){attempt(held,time);nextMove=time+165}
+ requestAnimationFrame(render);
+}
+function hold(dir){held=dir;nextMove=0;document.querySelectorAll('[data-dir]').forEach(function(b){b.classList.toggle('held',b.getAttribute('data-dir')===dir)})}
+function release(){held=null;document.querySelectorAll('[data-dir]').forEach(function(b){b.classList.remove('held')})}
+document.querySelectorAll('[data-dir]').forEach(function(el){
+ el.addEventListener('pointerdown',function(e){e.preventDefault();hold(el.getAttribute('data-dir'));if(el.setPointerCapture)el.setPointerCapture(e.pointerId)});
+ el.addEventListener('pointerup',release);el.addEventListener('pointercancel',release);el.addEventListener('lostpointercapture',release);
+ el.addEventListener('click',function(){if(running&&!walking)attempt(el.getAttribute('data-dir'),performance.now())});
+});
+document.getElementById('start').addEventListener('click',function(){reset(true)});
+document.getElementById('reset').addEventListener('click',function(){reset(false)});
+window.addEventListener('keydown',function(e){var dirs={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};if(dirs[e.key]){e.preventDefault();hold(dirs[e.key])}});
+window.addEventListener('keyup',function(e){if(e.key.startsWith('Arrow'))release()});
+window.addEventListener('blur',release);
+window.etariumDiagnostics={getState:function(){return {running:running,x:player.x,y:player.y,steps:steps,cameraX:cam.x,cameraY:cam.y,walking:walking,facing:player.face,stepCycle:stepCycle}},start:function(){reset(true)},move:function(d){return attempt(d,performance.now())}};
+reset(false);requestAnimationFrame(render);
+})();
+</script>
+</body></html>
