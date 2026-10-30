@@ -1,0 +1,142 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111827"><title>Etarium | Doppelkampf Worldbuilding</title>
+<style>
+:root{color-scheme:dark;--bg:#101824;--box:#1c2b3b;--light:#eee5d5;--gold:#e7c596;--red:#ba6c73}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#253b4c,#101824 72%);color:var(--light);font:14px system-ui,-apple-system,sans-serif}
+main{max-width:720px;margin:auto;padding:10px 10px 25px}header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #805063;padding:4px 5px 9px;margin-bottom:10px}
+h1{font:700 26px Georgia,serif;color:#f0b9c0;letter-spacing:.15em;margin:0}header small{font-size:10px;color:#b9c6cf;text-align:right}
+#groups{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}.team{background:#1e2c3e;border:1px solid #6c7685;border-radius:10px;padding:8px}
+.team h2{font-size:12px;color:#f4d8b2;margin:0 0 6px}.unit{padding:6px 3px;border-top:1px solid #ffffff20}.unit:first-of-type{border-top:0}
+.unit-name{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px}.unit-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.unit-name span{font-size:10px;color:#c9c9d4;flex-shrink:0}
+.track{height:6px;background:#354151;border-radius:6px;overflow:hidden;margin:4px 0 3px}.track i{height:100%;display:block;width:100%;background:#68bb8c;transition:width .2s}.track.magic i{background:#75a5e5}.team.opponent .track:not(.magic) i{background:#d58278}
+.unit.current .unit-name b{color:#ffcf8f}.unit.ko{opacity:.38}
+#arena{position:relative;border:2px solid #a96876;border-radius:13px;overflow:hidden;background:#8cbeb1;aspect-ratio:4/3}canvas{width:100%;height:100%;display:block}
+#sequence{display:flex;gap:5px;overflow-x:auto;padding:7px 0 10px;scrollbar-width:thin}.token{flex:0 0 auto;min-width:70px;border-radius:6px;border:1px solid #6b7a87;background:#26384a;padding:6px 5px;text-align:center;font-size:10px}.token.turn{border-color:#f2c289;background:#75475c}.token.ko{opacity:.35}
+#ui{border:1px solid #805a70;border-radius:11px;background:var(--box);padding:10px}
+#turnline{display:flex;justify-content:space-between;gap:5px;color:var(--gold);font-weight:750;font-size:12px}
+#info{min-height:44px;margin:9px 0;color:#e5e5dd;line-height:1.5}
+#skills,#targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#skills button,#targets button,#restart{border:1px solid #75879b;border-radius:9px;background:#304257;color:white;min-height:49px;font:700 12px system-ui;padding:6px}
+#skills button small{display:block;color:#bdd0df;font-weight:400;font-size:10px;margin-top:2px}
+#skills button.selected,#targets button.selected{border-color:#ffd9a0;background:#704356}
+#skills button:disabled,#targets button:disabled{opacity:.3}
+#targets{grid-template-columns:repeat(3,minmax(0,1fr))}
+#targets button{font-size:11px;min-height:47px}
+#labeltargets{font-size:11px;color:#d9c5b2;margin:10px 0 6px}
+#wait{border:1px dashed #91a0ad;border-radius:9px;text-align:center;padding:14px;color:#e2ceac}
+#restart{background:#85495d;width:100%;margin-top:8px}
+[hidden]{display:none!important}
+#controls{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}#controls button{border:1px solid #60788b;border-radius:9px;background:#284052;color:#fff;min-height:44px;font-weight:800}
+#controls button:disabled{opacity:.35}details{margin-top:9px;font-size:12px;color:#aebecb}details li{margin:5px 0}
+footer{text-align:center;margin-top:12px;font-size:11px;color:#9fb2be;line-height:1.5}
+</style></head>
+<body><main><header><h1>ETARIUM</h1><small>WORLDBUILDING<br>DOPPELKAMPF 01</small></header>
+<section id="groups" aria-label="Lebenspunkte und Äther der sechs Kämpfer">
+<div class="team opponent" id="enemyteam"><h2>KAELS TEAM</h2></div>
+<div class="team" id="playerteam"><h2>DEIN TEAM</h2></div>
+</section>
+<div id="arena"><canvas id="battle" width="512" height="384" aria-label="Zwei Geister und ein Magier pro Team"></canvas></div>
+<div id="sequence" aria-label="Reihenfolge nach Geschwindigkeit"></div>
+<section id="ui"><div id="turnline"><span id="round">RUNDE 1</span><span id="actor"></span></div>
+<div id="info" aria-live="polite">Doppelkampf beginnt.</div>
+<div id="skills" aria-label="Aktionswahl"></div><div id="labeltargets">Ziel auswählen</div>
+<div id="targets" aria-label="Alle sechs möglichen Ziele"></div>
+<div id="wait" hidden>Der Gegner führt seinen Zug aus …</div><button id="restart" hidden>Kampf neu starten</button>
+</section>
+<nav id="controls"><button id="left">◀</button><button id="right">▶</button><button id="confirm">A</button><button id="start">START</button></nav>
+<details><summary>Kampfprotokoll anzeigen</summary><ol id="log"></ol></details>
+<footer>2 Geister + 1 Magier pro Team · individuelle Geschwindigkeit · Zielauswahl · LP und Äther<br>Worldbuilding-Testwerte, kein verbindlicher Etarium-Kanon</footer></main>
+<script src="./engine.js?v=1"></script>
+<script>
+(function(){'use strict';
+var combat=window.ETARIUM_DOUBLE_BATTLE.create(),cv=document.getElementById('battle'),ctx=cv.getContext('2d'),IDs=['enemySpirit1','enemySpirit2','enemyMage','playerSpirit1','playerSpirit2','playerMage'];
+var skills=document.getElementById('skills'),targets=document.getElementById('targets'),selected=0,aim=null,timer=0,locked=false;
+function el(id){return document.getElementById(id)}
+function screenName(id){return combat.names[id]}
+function card(id){var parent=el(id.startsWith('enemy')?'enemyteam':'playerteam'),div=document.createElement('div');div.className='unit';div.id='stat-'+id;div.innerHTML='<div class="unit-name"><b></b><span class="nums"></span></div><div class="track"><i class="health"></i></div><div class="track magic"><i class="mana"></i></div>';parent.appendChild(div)}
+IDs.forEach(card);
+function actionOptions(){var s=combat.getState();return s.turn&&s.turn.startsWith('player')?combat.available(s.turn):[]}
+function validTargets(){var s=combat.getState(),m=actionOptions()[selected];return m?combat.targets(s.turn,m.key):[]}
+function chooseSkill(n){var opts=actionOptions();selected=(n+opts.length)%opts.length;if(!opts.length)return;aim=validTargets()[0]||null;paint()}
+function chooseTarget(t){if(!validTargets().includes(t))return false;aim=t;paint();return true}
+function paint(){
+ var s=combat.getState(),player=s.phase==='running'&&s.turn&&s.turn.startsWith('player')&&!locked;
+ IDs.forEach(function(id){
+  var div=el('stat-'+id);div.className='unit'+(s.turn===id?' current':'')+(s.hp[id]<=0?' ko':'');
+  div.querySelector('b').textContent=screenName(id)+' · '+s.speed[id]+' GE';
+  div.querySelector('.nums').textContent=s.hp[id]+'/'+combat.hpMax[id]+' LP · '+s.mana[id]+'/'+combat.manaMax[id]+' Ä';
+  div.querySelector('.health').style.width=s.hp[id]/combat.hpMax[id]*100+'%';
+  div.querySelector('.mana').style.width=s.mana[id]/combat.manaMax[id]*100+'%';
+ });
+ el('round').textContent='RUNDE '+s.round+' / '+s.maxRounds;
+ el('actor').textContent=s.phase==='finished'?'KAMPF BEENDET':screenName(s.turn)+' am Zug';
+ if(s.phase==='finished'){
+  el('info').textContent=(s.winner==='player'?'SIEG! Dein Team gewinnt.':s.winner==='enemy'?'NIEDERLAGE. Kael gewinnt.':'UNENTSCHIEDEN.')+' '+s.lastMessage;
+ }else el('info').textContent=s.lastMessage+(player?' Wähle eine Aktion und ein zulässiges Ziel.':'');
+ el('wait').hidden=s.phase!=='running'||!s.turn||!s.turn.startsWith('enemy');
+ el('restart').hidden=s.phase!=='finished';
+ skills.hidden=!player;targets.hidden=!player;el('labeltargets').hidden=!player;
+ var available=actionOptions();skills.replaceChildren();
+ available.forEach(function(m,i){var btn=document.createElement('button');btn.className=i===selected?'selected':'';btn.disabled=combat.targets(s.turn,m.key).length===0;
+ btn.textContent=m.name;var sub=document.createElement('small');sub.textContent=m.restore?'+'+m.restore+' Äther':m.cost+' Äther · '+(m.damage?'−'+m.damage+' LP':m.heal?'+'+m.heal+' LP':'Schutz '+m.shield);btn.appendChild(sub);
+ btn.addEventListener('click',function(){selected=i;aim=combat.targets(s.turn,m.key)[0]||null;paint()});skills.appendChild(btn)});
+ var valid=validTargets();if(!valid.includes(aim))aim=valid[0]||null;
+ targets.replaceChildren();
+ IDs.forEach(function(id){var btn=document.createElement('button');btn.disabled=!valid.includes(id);btn.className=id===aim?'selected':'';btn.textContent=screenName(id);btn.addEventListener('click',function(){chooseTarget(id)});targets.appendChild(btn)});
+ var line=el('sequence');line.replaceChildren();s.order.forEach(function(id,i){var div=document.createElement('span');div.className='token'+(id===s.turn?' turn':'')+(s.hp[id]===0?' ko':'');div.textContent=(i+1)+'. '+screenName(id)+' · '+s.speed[id];line.appendChild(div)});
+ el('left').disabled=!player;el('right').disabled=!player;el('confirm').disabled=!player&&s.phase!=='finished';
+ var log=el('log');log.replaceChildren();s.history.slice(-20).forEach(function(x){var li=document.createElement('li');li.textContent='R'+x.round+': '+x.text;log.appendChild(li)})
+}
+function enemyTurn(token){
+ var s=combat.getState();if(s.phase!=='running'||!s.turn.startsWith('enemy')||locked)return;
+ locked=true;paint();
+ setTimeout(function(){if(token!==timer)return;var result=combat.enemy();locked=false;if(result){selected=0;aim=null;paint();if(result.state.phase==='running'&&result.state.turn.startsWith('enemy'))enemyTurn(token)}},480)
+}
+function begin(){timer++;locked=false;selected=0;aim=null;combat.start();paint();if(combat.getState().turn.startsWith('enemy'))enemyTurn(timer)}
+function act(){
+ var s=combat.getState();if(s.phase==='finished'){begin();return}
+ if(locked||!s.turn.startsWith('player'))return;
+ var m=actionOptions()[selected];if(!m||!aim)return;
+ var result=combat.player(m.key,aim);if(!result)return;
+ selected=0;aim=null;paint();if(result.state.phase==='running'&&result.state.turn.startsWith('enemy'))enemyTurn(timer)
+}
+el('left').addEventListener('click',function(){if(!el('left').disabled)chooseSkill(selected-1)});
+el('right').addEventListener('click',function(){if(!el('right').disabled)chooseSkill(selected+1)});
+el('confirm').addEventListener('click',act);el('start').addEventListener('click',begin);el('restart').addEventListener('click',begin);
+document.addEventListener('keydown',function(e){var k=e.key.toLowerCase();if(k==='arrowleft'){e.preventDefault();if(!el('left').disabled)chooseSkill(selected-1)}if(k==='arrowright'){e.preventDefault();if(!el('right').disabled)chooseSkill(selected+1)}if(k==='enter'||k==='a'){e.preventDefault();act()}if(k==='r'||k==='s'){e.preventDefault();begin()}});
+function ellipse(x,y,rx,ry,color){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
+function actor(x,y,scale,color,ghost,enemy,t,dead){
+ if(dead)return;
+ ctx.save();ctx.translate(x,y+Math.sin(t/470+x)*2);ctx.scale(scale,scale);
+ ellipse(0,5,33,9,'#283f5455');
+ if(ghost){
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-24,-11);ctx.lineTo(-31,-41);ctx.lineTo(-17,-65);ctx.lineTo(-5,-55);ctx.lineTo(11,-71);ctx.lineTo(24,-37);ctx.lineTo(25,-8);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#d6e7df';ctx.beginPath();ctx.ellipse(0,-35,17,25,0,0,Math.PI*2);ctx.fill();
+  if(enemy){ctx.fillStyle='#263f5e';ctx.fillRect(-9,-41,5,5);ctx.fillRect(7,-41,5,5)}
+  else {ctx.fillStyle=color;ctx.fillRect(-17,-48,34,13)}
+ }else{
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-15,-33);ctx.lineTo(16,-33);ctx.lineTo(24,0);ctx.lineTo(-24,0);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#d7b498';ctx.beginPath();ctx.arc(0,-41,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#302c36';ctx.fillRect(-11,-52,22,8);
+  ctx.fillStyle='#d8a976';ctx.fillRect(18,-48,3,50);
+  ctx.fillStyle='#a1dbe7';ctx.fillRect(14,-51,11,9)
+ }
+ ctx.restore()
+}
+function render(t){
+ var s=combat.getState();
+ var bg=ctx.createLinearGradient(0,0,0,384);bg.addColorStop(0,'#78c4cd');bg.addColorStop(.55,'#b8dfb2');bg.addColorStop(1,'#679a7d');ctx.fillStyle=bg;ctx.fillRect(0,0,512,384);
+ ctx.fillStyle='#7bab96';ctx.beginPath();ctx.moveTo(0,177);ctx.lineTo(98,121);ctx.lineTo(194,172);ctx.lineTo(280,118);ctx.lineTo(398,176);ctx.lineTo(512,119);ctx.lineTo(512,263);ctx.lineTo(0,263);ctx.fill();
+ ellipse(148,285,150,40,'#d5d9af');ellipse(361,215,148,32,'#e1dfbb');
+ actor(285,192,.75,'#7b96c6',true,true,t,s.hp.enemySpirit1===0);
+ actor(411,188,.72,'#9e85b7',true,true,t,s.hp.enemySpirit2===0);
+ actor(486,224,.78,'#873c56',false,true,t,s.hp.enemyMage===0);
+ actor(102,288,1.15,'#91653f',true,false,t,s.hp.playerSpirit1===0);
+ actor(212,299,1.06,'#70a995',true,false,t,s.hp.playerSpirit2===0);
+ actor(33,330,.93,'#355e88',false,false,t,s.hp.playerMage===0);
+ ctx.fillStyle='#15293bd9';ctx.fillRect(0,351,512,33);ctx.fillStyle='#f3dbb5';ctx.font='bold 14px system-ui';ctx.fillText('DOPPELKAMPF · RUNDE '+s.round+' · '+(s.turn?screenName(s.turn):'Beendet'),11,373);
+ requestAnimationFrame(render)
+}
+window.etariumDoubleDemo={getState:combat.getState,chooseTarget:chooseTarget,act:act,restart:begin};
+begin();requestAnimationFrame(render)
+})();
+</script></body></html>
