@@ -1,7 +1,7 @@
 /* ETARIUM WORLDBUILDING – TRIPLE BATTLE, experimental */
 (function(){'use strict';
 function create(options){
- options=options||{};var random=options.random||Math.random,maxRounds=options.maxRounds||12;
+ options=options||{};var random=options.random||Math.random;
  var ids=['playerSpirit1','playerSpirit2','playerSpirit3','playerMage','enemySpirit1','enemySpirit2','enemySpirit3','enemyMage'];
  var names={playerSpirit1:'Dein Geist I',playerSpirit2:'Dein Geist II',playerSpirit3:'Dein Geist III',playerMage:'Dein Magier',enemySpirit1:'Kaels Geist I',enemySpirit2:'Kaels Geist II',enemySpirit3:'Kaels Geist III',enemyMage:'Magier Kael'};
  var hpMax={playerSpirit1:100,playerSpirit2:95,playerSpirit3:90,playerMage:70,enemySpirit1:100,enemySpirit2:95,enemySpirit3:90,enemyMage:70};
@@ -21,7 +21,7 @@ function create(options){
  function team(id){return id.slice(0,6)==='player'?'player':'enemy'}
  function roll(n){return Math.max(0,Math.min(n-1,Math.floor(random()*n)))}
  function order(){var sorted=ids.slice().sort(function(a,b){return speed[b]-speed[a]});for(var i=0;i<sorted.length;){var j=i+1;while(j<sorted.length&&speed[sorted[i]]===speed[sorted[j]])j++;for(var x=j-1;x>i;x--){var y=i+roll(x-i+1),tmp=sorted[x];sorted[x]=sorted[y];sorted[y]=tmp}i=j}return sorted}
- function clone(){return {round:state.round,turn:state.turn,phase:state.phase,order:state.order.slice(),acted:state.acted.slice(),hp:Object.assign({},state.hp),mana:Object.assign({},state.mana),shield:Object.assign({},state.shield),speed:Object.assign({},speed),lastMessage:state.lastMessage,history:state.history.slice(),winner:state.winner,maxRounds:maxRounds}}
+ function clone(){return {round:state.round,turn:state.turn,phase:state.phase,order:state.order.slice(),acted:state.acted.slice(),hp:Object.assign({},state.hp),mana:Object.assign({},state.mana),shield:Object.assign({},state.shield),speed:Object.assign({},speed),lastMessage:state.lastMessage,history:state.history.slice(),winner:state.winner,defeatReason:state.defeatReason}}
  function alive(id){return state.hp[id]>0}
  function available(id){return (moves[id]||[]).map(function(m){return Object.assign({},m)})}
  function targets(id,key){
@@ -34,17 +34,25 @@ function create(options){
   if(m.shield)return (id.endsWith('Mage')?ids.filter(function(t){return team(t)===team(id)}):[id]).filter(alive);
   return [];
  }
- function winner(){var p=ids.some(function(id){return team(id)==='player'&&alive(id)}),e=ids.some(function(id){return team(id)==='enemy'&&alive(id)});return p&&!e?'player':e&&!p?'enemy':null}
+ function defeatReason(side){
+  if(!alive(side+'Mage'))return 'mage';
+  if(![1,2,3].some(function(n){return alive(side+'Spirit'+n)}))return 'spirits';
+  return null;
+ }
+ function winner(){
+  var playerDefeated=defeatReason('player'),enemyDefeated=defeatReason('enemy');
+  if(playerDefeated&&enemyDefeated)return 'draw';
+  return playerDefeated?'enemy':enemyDefeated?'player':null;
+ }
  function progress(){
   while(state.phase==='running'){
    if(state.acted.length===state.order.length){
-    if(state.round>=maxRounds){var scores={player:0,enemy:0};ids.forEach(function(id){scores[team(id)]+=state.hp[id]});state.winner=scores.player===scores.enemy?'draw':scores.player>scores.enemy?'player':'enemy';state.turn=null;state.phase='finished';return}
     state.round++;state.acted=[];state.order=order();
    }
    var id=state.order[state.acted.length];if(alive(id)){state.turn=id;return}state.acted.push(id);
   }
  }
- function start(){state={round:1,turn:null,phase:'running',order:order(),acted:[],hp:Object.assign({},hpMax),mana:Object.assign({},manaMax),shield:Object.fromEntries(ids.map(function(x){return [x,0]})),lastMessage:'Dreifachkampf beginnt! Acht Kämpfer treten an.',history:[],winner:null};progress();return clone()}
+ function start(){state={round:1,turn:null,phase:'running',order:order(),acted:[],hp:Object.assign({},hpMax),mana:Object.assign({},manaMax),shield:Object.fromEntries(ids.map(function(x){return [x,0]})),lastMessage:'Dreifachkampf beginnt! Acht Kämpfer treten an.',history:[],winner:null,defeatReason:null};progress();return clone()}
  function execute(actor,key,target){
   if(state.phase!=='running'||state.turn!==actor||!targets(actor,key).includes(target))return null;
   var m=moves[actor].find(function(x){return x.key===key}),value=0;
@@ -56,7 +64,12 @@ function create(options){
   var kind=m.restore?'restore':m.damage?'damage':m.heal?'heal':'shield';
   state.lastMessage=names[actor]+' nutzt '+m.name+' auf '+names[target]+' ('+(kind==='damage'?'-'+value+' LP':kind==='heal'?'+'+value+' LP':kind==='restore'?'+'+value+' Äther':'Schutz '+value)+').';
   var entry={round:state.round,actor:actor,move:key,target:target,kind:kind,value:value,cost:m.cost,text:state.lastMessage};state.history.push(entry);state.acted.push(actor);
-  state.winner=winner();if(state.winner){state.phase='finished';state.turn=null}else progress();
+  state.winner=winner();if(state.winner){
+   state.defeatReason=state.winner==='player'?defeatReason('enemy'):state.winner==='enemy'?defeatReason('player'):'both';
+   state.lastMessage+=' '+(state.winner==='player'?'Kaels Team':state.winner==='enemy'?'Dein Team':'Beide Teams')+
+      (state.defeatReason==='mage'?' verliert: Magier K. o.!':state.defeatReason==='spirits'?' verliert: alle drei Geister K. o.!':' sind besiegt.');
+   state.phase='finished';state.turn=null
+  }else progress();
   return {entry:entry,state:clone()}
  }
  function player(key,target){return state.turn&&team(state.turn)==='player'?execute(state.turn,key,target):null}
