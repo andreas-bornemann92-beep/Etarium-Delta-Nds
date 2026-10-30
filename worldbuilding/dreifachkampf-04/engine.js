@@ -19,6 +19,8 @@ function create(options){
  };
  // Active mages can be targeted. Passive mages may only support living allied spirits.
  // Mode change consumes the mage's entire main action, no more than once per round.
+ moves.playerMage.unshift({key:'attack',name:'Stabstoß',damage:10,cost:0});
+ moves.enemyMage.unshift({key:'attack',name:'Stabstoß',damage:10,cost:0});
  moves.playerMage.push({key:'bind',name:'Fesselzauber',weak:6,cost:12});
  moves.enemyMage.push({key:'bind',name:'Fesselzauber',weak:6,cost:12});
  var passiveMoves={
@@ -43,7 +45,8 @@ function create(options){
    set.push({key:'switch',name:state.mageMode[id]==='active'?'Passiv werden':'Aktiv werden',cost:0,switch:true});
   if(team(id)==='player'&&alive(id)){
    if(state.items.potion>0)set.push({key:'item_potion',name:'Heiltrank (Test)',heal:20,cost:0,item:true});
-   if(!isMage(id)&&state.reserve[playerReserveKey(id)])set.push({key:'swap',name:'Geist wechseln',cost:0,swap:true});
+   if((!isMage(id)&&state.reserve[playerReserveKey(id)])||(isMage(id)&&[1,2,3].some(function(n){return alive('playerSpirit'+n)&&state.reserve['playerSpirit'+n]})))
+    set.push({key:'swap',name:'Geist wechseln',cost:0,swap:true});
    if(battleType==='wild')set.push({key:'flee',name:'Fliehen',cost:0,flee:true});
   }
   return set
@@ -53,7 +56,8 @@ function create(options){
   if(!id||!alive(id))return [];
   var m=available(id).find(function(x){return x.key===key});
   if(!m||state.mana[id]<m.cost)return [];
-  if(m.switch||m.swap||m.flee)return [id];
+  if(m.switch||m.flee)return [id];
+  if(m.swap)return isMage(id)?[1,2,3].map(function(n){return 'playerSpirit'+n}).filter(function(t){return alive(t)&&state.reserve[t]>0}):[id];
   if(m.item)return ids.filter(function(t){return alive(t)&&team(t)===team(id)&&state.hp[t]<hpMax[t]});
   if(m.restore)return [id];
   if(m.buff)return ids.filter(function(t){return alive(t)&&team(t)===team(id)&&!isMage(t)});
@@ -98,11 +102,11 @@ function create(options){
    state.phase='finished';state.winner='escaped';state.defeatReason='escape';
   }
   else if(m.swap){
-   var next=reserveStats[actor],old={hp:state.hp[actor],max:hpMax[actor],mana:state.mana[actor],manaMax:manaMax[actor]};
-   state.hp[actor]=next.hp;hpMax[actor]=next.max;state.mana[actor]=next.mana;manaMax[actor]=next.manaMax;
-   reserveStats[actor]=old;state.reserve[actor]=0;
-   names[actor]=reserveNames[actor][0];
-   state.shield[actor]=0;state.buff[actor]=0;state.weak[actor]=0;
+   var next=reserveStats[target],old={hp:state.hp[target],max:hpMax[target],mana:state.mana[target],manaMax:manaMax[target]};
+   state.hp[target]=next.hp;hpMax[target]=next.max;state.mana[target]=next.mana;manaMax[target]=next.manaMax;
+   reserveStats[target]=old;state.reserve[target]=0;
+   names[target]=reserveNames[target][0];
+   state.shield[target]=0;state.buff[target]=0;state.weak[target]=0;
   }
   else if(m.item){
    state.items.potion--;
