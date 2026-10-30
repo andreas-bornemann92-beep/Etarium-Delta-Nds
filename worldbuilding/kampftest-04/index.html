@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>Etarium – Worldbuilding Kampftest 04</title>
+<style>
+:root{color-scheme:dark;--rim:#8d5265;--gold:#e7cba0;--bright:#fae7d1;--muted:#b2c0c8}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0f1825;color:var(--bright);font-family:system-ui,-apple-system,sans-serif}
+button{font:inherit;touch-action:manipulation}
+main{width:min(100%,700px);margin:auto;padding:10px 10px calc(env(safe-area-inset-bottom) + 24px)}
+header{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 3px 12px;border-bottom:1px solid #6d4356}
+h1{font:700 24px Georgia,serif;color:#efb6c0;letter-spacing:.14em;margin:0}
+header small{font-size:10px;color:#aebcc9;text-align:right;letter-spacing:.08em}
+#statusbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:9px;margin:12px 0 10px}
+.fighter{border:1px solid #6c7887;border-radius:9px;padding:8px;background:#1d2b3b;min-width:0}
+.fighter.enemy{border-color:#996b68}.fighter.player{border-color:#608e7d}
+.fighter .who{font-weight:750;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fighter .num{font-size:11px;color:var(--muted);margin-top:4px}
+.meter{height:9px;background:#344352;border-radius:10px;overflow:hidden;margin-top:5px}
+.meter > span{display:block;height:100%;width:100%;background:#cb796e;transition:width .25s}
+.player .meter > span{background:#75c39a}
+#roundchip{font-size:11px;color:var(--gold);text-align:center;min-width:65px}
+#roundchip strong{font-size:16px;display:block}
+#mages{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 8px}
+.mage-stat{border:1px solid #725e83;border-radius:8px;background:#243044;padding:7px 9px;font-size:11px}
+.mage-stat span{color:#f2d5aa;font-weight:700}.mage-stat b{float:right;color:#d8e0ed}
+.mage-stat .meter{height:6px;margin-top:5px}
+.mage-stat .meter>span{background:#a393d7}
+#frame{border:2px solid var(--rim);border-radius:13px;overflow:hidden;aspect-ratio:4/3;background:#83b5ae}
+#scene{display:block;width:100%;height:100%}
+#actionarea{margin-top:9px;background:#1d2939;border:1px solid #815667;border-radius:11px;padding:11px}
+#turnline{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:#c6b5aa;letter-spacing:.04em}
+#phase{color:#edcda2;font-weight:750}
+#log{margin-top:7px;min-height:43px;line-height:1.42;font-size:13px}
+#choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px}
+#choices[hidden],#restart[hidden]{display:none}
+.move{min-height:59px;border-radius:9px;border:1px solid #6b8096;background:#304157;color:#f5e9d6;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:6px 3px}
+.move strong{font-size:14px}.move small{font-size:10px;color:#bec9d1}
+.move.selected{outline:2px solid #dca3a8;outline-offset:-2px;background:#6e3d53}
+.move:disabled{opacity:.45}
+#wait{margin-top:10px;border:1px dashed #778392;border-radius:8px;text-align:center;color:#c8d2d9;padding:10px;font-size:12px}
+#wait[hidden]{display:none}
+#restart{width:100%;margin-top:10px;border:1px solid #d28b99;background:#793d54;color:#fff1e4;border-radius:9px;padding:14px;font-weight:750}
+#history{margin-top:9px;padding:9px;border:1px solid #334659;border-radius:10px;background:#152131}
+#history summary{cursor:pointer;color:#c8d6d9;font-size:12px}
+#history ol{font-size:12px;color:#c2cdd3;margin:10px 0 4px;padding-left:24px;line-height:1.6}
+#history li:last-child{color:#f4e3c7}
+#targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+#targets[hidden]{display:none}
+#targets button{padding:10px 8px;background:#28394d;border:1px solid #6e8797;border-radius:8px;color:#e3ded6;font-weight:750}
+#targets button.active{border-color:#f0bf7e;background:#6f4655}
+#targets button:disabled{opacity:.3;filter:grayscale(1)}
+#targetcaption{font-size:11px;color:#d5c9b4;margin-top:10px}
+#touchbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}
+#touchbar button{min-height:47px;background:#283c50;border:1px solid #657e90;border-radius:9px;color:#e9dbc6;font-weight:800;font-size:15px}
+#touchbar button:active{background:#7e4056}
+#touchbar button:disabled{opacity:.45}
+footer{text-align:center;color:#9faebc;font-size:11px;line-height:1.6;margin-top:10px}
+@media(max-width:365px){main{padding:7px 6px 22px}.fighter{padding:6px}.move strong{font-size:12px}#statusbar{gap:5px}#roundchip{min-width:52px}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>ETARIUM</h1><small>WORLDBUILDING<br>KAMPFTEST 04</small></header>
+<section id="statusbar" aria-label="Kampfstatus">
+ <div class="fighter enemy"><div class="who">Kaels Geist</div><div class="num" id="enemyvalue">100 / 100 LP</div><div class="meter"><span id="enemybar"></span></div></div>
+ <div id="roundchip"><span>RUNDE</span><strong id="roundnumber">1</strong><span id="initiative">Start: –</span></div>
+ <div class="fighter player"><div class="who">Dein Geist</div><div class="num" id="playervalue">100 / 100 LP</div><div class="meter"><span id="playerbar"></span></div></div>
+</section>
+<section id="mages" aria-label="Magierstatus">
+<div class="mage-stat">Kael · Magier <b id="enemyMageHP">70 / 70</b><div class="meter"><span id="enemyMageBar"></span></div></div>
+<div class="mage-stat">Dein Magier <b id="playerMageHP">70 / 70</b><div class="meter"><span id="playerMageBar"></span></div></div>
+</section>
+<div id="frame"><canvas id="scene" width="512" height="384" aria-label="Kampfszene mit beiden Geistern"></canvas></div>
+<section id="actionarea" aria-label="Kampfaktionen und Zugstatus">
+ <div id="turnline"><span id="phase">KAMPFBEGINN</span><span id="turnhint">Geister & Magier · einzeln am Zug</span></div>
+ <div id="log" aria-live="polite"></div>
+ <div id="choices" aria-label="Aktionen wählen">
+  <button class="move selected" data-move="attack"><strong>⚔ Angriff</strong><small>16 Schaden</small></button>
+  <button class="move" data-move="magic"><strong>✦ Lichtfunken</strong><small>22 Schaden</small></button>
+  <button class="move" data-move="guard"><strong>◆ Schutz</strong><small>−12 beim Treffer</small></button>
+ </div>
+ <div id="targetcaption">Ziel wählen – alle Kampfteilnehmer</div>
+ <div id="targets" aria-label="Alle Ziele wählen">
+ <button data-target="enemySpirit" type="button">Kaels Geist</button>
+ <button data-target="enemyMage" type="button">Magier Kael</button>
+ <button data-target="playerSpirit" type="button">Dein Geist</button>
+ <button data-target="playerMage" type="button">Dein Magier</button>
+ </div>
+ <div id="wait" hidden>Kael führt seinen Zug aus …</div>
+ <button id="restart" hidden>Kampf neu starten</button>
+</section>
+<nav id="touchbar" aria-label="Touch-Steuerung">
+<button id="navleft" aria-label="Vorherige Aktion">◀</button>
+<button id="navright" aria-label="Nächste Aktion">▶</button>
+<button id="navconfirm" aria-label="Auswahl bestätigen">A</button>
+<button id="navstart" aria-label="Kampf neu starten">START</button>
+</nav>
+<details id="history"><summary>Kampfprotokoll anzeigen</summary><ol id="events"></ol></details>
+<footer>◀ ▶ Aktion wählen · A / Enter bestätigen · START / R neu beginnen<br>Jeder Magier hat 70 eigene LP und Angriffs-, Heil- und Schutzaktionen. Bei jeder Aktion wählst du das konkrete Ziel. Nur passende, lebende Ziele sind anwählbar.</footer>
+</main>
+<script src="../../x/battle.js?v=kampftest4"></script>
+<script src="./mage-turn-system.js?v=kampftest4"></script>
+<script>
+(function(){
+'use strict';
+var visual=window.ETARIUM_BATTLE,combat=window.ETARIUM_MAGE_BATTLE.create();
+var ctx=document.getElementById('scene').getContext('2d'),buttons=Array.from(document.querySelectorAll('[data-move]'));
+var selected=0,epoch=0,pending=false,preferred='enemySpirit';
+var targets=Array.from(document.querySelectorAll('[data-target]'));
+function el(id){return document.getElementById(id)}
+function select(n){selected=(n+buttons.length)%buttons.length;buttons.forEach(function(b,i){b.classList.toggle('selected',i===selected)});refreshTargets()}
+function targetChoice(next){
+ var valid=availableTargets();
+ if(!valid.includes(next))return false;
+ preferred=next;updateTargetButtons(valid);return true
+}
+function availableTargets(){
+ var state=combat.getState();if(state.phase!=='running'||!state.turn||!state.turn.startsWith('player'))return [];
+ return combat.availableTargets(state.turn,buttons[selected].dataset.move)
+}
+function updateTargetButtons(valid){
+ var state=combat.getState(),enabled=state.phase==='running'&&state.turn&&state.turn.startsWith('player')&&!pending;
+ targets.forEach(function(btn){
+  var id=btn.dataset.target;
+  btn.classList.toggle('active',enabled&&id===preferred);
+  btn.disabled=!enabled||!valid.includes(id);
+  var hp=state.hp[id];
+  btn.textContent=combat.names[id]+' · '+hp+' LP'+(hp<=0?' (K.O.)':'')
+ });
+}
+function refreshTargets(){
+ var valid=availableTargets();
+ if(!valid.includes(preferred))preferred=valid[0]||null;
+ updateTargetButtons(valid)
+}
+function drawMage(x,y,scale,enemy,t){
+ ctx.save();ctx.translate(x,y+Math.sin(t/420+(enemy?1:0))*2);ctx.scale(scale,scale);
+ ctx.fillStyle='#17233450';ctx.beginPath();ctx.ellipse(0,6,23,7,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=enemy?'#682c42':'#284d6e';ctx.beginPath();ctx.moveTo(-14,-16);ctx.lineTo(-23,2);ctx.lineTo(24,2);ctx.lineTo(14,-16);ctx.closePath();ctx.fill();
+ ctx.fillStyle=enemy?'#b77b73':'#9cbbc9';ctx.fillRect(-12,-30,24,21);
+ ctx.fillStyle=enemy?'#ecd1b1':'#e6c2a3';ctx.beginPath();ctx.arc(0,-39,11,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=enemy?'#3c2432':'#46372c';ctx.fillRect(-11,-50,22,7);
+ ctx.fillStyle=enemy?'#c0a0c8':'#83c9dc';ctx.fillRect(18,-43,3,43);
+ ctx.beginPath();ctx.arc(19,-47,7,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#f7e5c3';ctx.fillRect(-16,-22,5,18);ctx.fillRect(11,-22,5,18);
+ ctx.restore()
+}
+function paint(){
+ var s=combat.getState();
+ visual.state.playerHP=s.hp.playerSpirit;visual.state.enemyHP=s.hp.enemySpirit;visual.state.round=s.round;
+ el('enemyvalue').textContent=s.hp.enemySpirit+' / 100 LP';el('playervalue').textContent=s.hp.playerSpirit+' / 100 LP';
+ el('enemybar').style.width=s.hp.enemySpirit+'%';el('playerbar').style.width=s.hp.playerSpirit+'%';
+ el('enemyMageHP').textContent=s.hp.enemyMage+' / 70 LP';el('playerMageHP').textContent=s.hp.playerMage+' / 70 LP';
+ el('enemyMageBar').style.width=(s.hp.enemyMage/70*100)+'%';el('playerMageBar').style.width=(s.hp.playerMage/70*100)+'%';
+ el('roundnumber').textContent=String(s.round);
+ el('initiative').textContent='Start: '+(s.starter==='player'?'Du':'Kael');
+ var allowed=s.phase==='running'&&s.turn&&s.turn.indexOf('player')===0&&!pending;
+ el('choices').hidden=!allowed;el('targets').hidden=!allowed;
+ el('targetcaption').hidden=!allowed;
+ el('wait').hidden=s.phase!=='running'||!s.turn||s.turn.indexOf('enemy')!==0;
+ el('restart').hidden=s.phase!=='finished';
+ el('navleft').disabled=!allowed;el('navright').disabled=!allowed;el('navconfirm').disabled=!allowed&&s.phase!=='finished';
+ if(allowed){
+  var options=combat.available(s.turn);
+  buttons.forEach(function(btn,i){btn.dataset.move=options[i].key;btn.querySelector('strong').textContent=options[i].name;btn.querySelector('small').textContent=options[i].damage?options[i].damage+' Schaden':options[i].heal?'Heilung +'+options[i].heal:'Schutz '+options[i].shield});
+  refreshTargets();
+ }
+ if(s.phase==='finished'){
+  el('phase').textContent=s.winner==='player'?'SIEG':s.winner==='enemy'?'NIEDERLAGE':'UNENTSCHIEDEN';
+  el('turnhint').textContent='Kampf beendet';
+  el('log').textContent=s.lastMessage+' '+(s.winner==='player'?'Dein Team gewinnt!':s.winner==='enemy'?'Kaels Team gewinnt.':'Beide Teams gleichauf.');
+ }else{
+  var who=combat.names[s.turn]||'';
+  el('phase').textContent=who.toUpperCase()+' AM ZUG';
+  el('turnhint').textContent='Runde '+s.round+' · '+(allowed?'Aktion wählen':'Aktion läuft');
+  el('log').textContent=s.lastMessage+(allowed?' Wähle eine Aktion und entscheide, ob der Geist oder der Magier das Ziel ist.':'');
+ }
+ if(!allowed)updateTargetButtons([]);
+ var list=el('events');list.replaceChildren();
+ s.history.slice(-12).forEach(function(row){var li=document.createElement('li');li.textContent='R'+row.round+': '+row.text;list.appendChild(li)});
+ return s
+}
+function enemyTurn(token){
+ if(pending)return;
+ var s=combat.getState();if(s.phase!=='running'||!s.turn||s.turn.indexOf('enemy')!==0)return;
+ pending=true;paint();
+ window.setTimeout(function(){
+  if(token!==epoch)return;
+  var done=combat.enemy();pending=false;if(!done)return;
+  paint();if(done.state.phase==='running'&&done.state.turn.indexOf('enemy')===0)enemyTurn(token)
+ },580)
+}
+function begin(){epoch++;pending=false;preferred='enemySpirit';visual.enter('Kael',performance.now());combat.start();select(0);paint();if(combat.getState().turn.indexOf('enemy')===0)enemyTurn(epoch);return combat.getState()}
+function choose(key){
+ if(pending)return false;
+ var result=combat.player(key,preferred);if(!result)return false;
+ paint();if(result.state.phase==='running'&&result.state.turn.indexOf('enemy')===0)enemyTurn(epoch);
+ return true
+}
+function confirm(){if(combat.getState().phase==='finished')begin();else choose(buttons[selected].dataset.move)}
+buttons.forEach(function(btn,i){btn.addEventListener('click',function(){select(i);choose(btn.dataset.move)})});
+targets.forEach(function(btn){btn.addEventListener('click',function(){targetChoice(btn.dataset.target)})});
+el('restart').addEventListener('click',begin);el('navstart').addEventListener('click',begin);
+el('navleft').addEventListener('click',function(){if(!el('navleft').disabled)select(selected-1)});
+el('navright').addEventListener('click',function(){if(!el('navright').disabled)select(selected+1)});
+el('navconfirm').addEventListener('click',confirm);
+document.addEventListener('keydown',function(e){
+ var k=e.key.toLowerCase();
+ if(k==='arrowleft'||k==='arrowup'){e.preventDefault();if(!el('navleft').disabled)select(selected-1)}
+ if(k==='arrowright'||k==='arrowdown'){e.preventDefault();if(!el('navright').disabled)select(selected+1)}
+ if(k==='enter'||k===' '||k==='a'){e.preventDefault();confirm()}
+ if(k==='r'||k==='s'){e.preventDefault();begin()}
+ if(k==='t'&&combat.getState().turn&&combat.getState().turn.indexOf('player')===0){var valid=availableTargets(),ix=valid.indexOf(preferred);if(valid.length)targetChoice(valid[(ix+1)%valid.length])}
+});
+function frame(t){
+ visual.draw(ctx,512,384,t);
+ drawMage(437,222,.7,true,t);drawMage(55,308,.98,false,t);
+ ctx.save();ctx.fillStyle='#152737ec';ctx.fillRect(0,333,512,51);
+ ctx.fillStyle='#efdab1';ctx.font='bold 13px system-ui';ctx.fillText('4 FIGUREN · RUNDE '+combat.getState().round,15,355);
+ ctx.font='12px system-ui';ctx.fillText('Geister & Magier wechseln sich ab',15,372);ctx.restore();
+ requestAnimationFrame(frame)
+}
+window.etariumBattleDemo={reset:begin,choose:choose,getState:combat.getState,getSelected:function(){return buttons[selected].dataset.move},getTarget:function(){return preferred},setTarget:targetChoice};
+begin();requestAnimationFrame(frame)
+})();
+</script>
+</body></html>
