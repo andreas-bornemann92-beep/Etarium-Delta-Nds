@@ -12,7 +12,7 @@
 - Aktiv: Funkenstoß/Arkanstoß 14 LP für 10 Äther; Fesselzauber für 12 Äther, senkt nächsten Angriff des Ziels um 6; Heillicht +16 LP für 14 Äther; Schutzkreis 12 Schutz für 9 Äther; Äther sammeln +16.
 - Passiv: Angriffsbefehl gibt einem lebenden eigenen Geist +6 Schaden beim nächsten Angriff (8 Äther); Heillicht +16 LP für 14 Äther an verletzten eigenen Geist; Schutzbefehl gibt 12 Schutz (9 Äther) an einen eigenen Geist; Äther sammeln +16.
 - Unterstützungsboni werden beim nächsten Angriff verbraucht und können nicht gestapelt werden.
-- **Fangaktionen im Passiv-Modus sind für das spätere System vorgesehen, aber nicht freigegeben/implementiert:** Fangwahrscheinlichkeit, Bedingungen und Gegenstände stehen als Regeln noch aus. Nicht durch erfundene Werte simuliert.
+- **Verbindliche Fangregel (Nutzerkorrektur):** Im **Passiv-Modus** darf ein Magier **wilde Geister fangen**. Diese Erlaubnis gilt ausdrücklich auch dann, wenn der Magier selbst nicht angreifbar ist. Sie gilt nicht pauschal für die Geister eines gegnerischen Magiers. **Technisch noch offen:** Wildkampf-Erkennung, Fangauslösung, Fangwahrscheinlichkeit, Hilfsmittel, Fanggrenzen und Folgen bei Erfolg/Misserfolg; diese Effekte sind in Dreifachkampf 03 noch nicht implementiert. Keine Fangquoten erfinden.
 - Die oben genannten Zahlen sind lediglich Worldbuilding-Testwerte und **keine neuen Kanonwerte**.
 
 ## Testläufe
