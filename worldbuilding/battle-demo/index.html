@@ -24,7 +24,7 @@ header small{color:#d9c4a9;letter-spacing:.07em;font-size:11px;text-align:right}
 #tiny{font-size:11px;color:#96a9b4;text-align:center;margin-top:7px}
 @media(max-width:400px){#moves button{font-size:13px;min-height:64px}header small{font-size:10px}#panel{padding:11px}}
 </style></head>
-<body><main><header><h1>ETARIUM</h1><small>KAMPFSIMULATION<br>WORLDBUILDING · DEMO 01</small></header>
+<body><main><header><h1>ETARIUM</h1><small>KAMPFSIMULATION<br>WORLDBUILDING · DEMO 02</small></header>
 <section aria-label="Kampfbildschirm" id="frame"><canvas id="scene" width="512" height="384"></canvas></section>
 <section id="panel" aria-live="polite">
 <div id="headline"></div><div id="message"></div>
@@ -37,53 +37,79 @@ header small{color:#d9c4a9;letter-spacing:.07em;font-size:11px;text-align:right}
 <button id="restart" hidden>Erneut kämpfen</button>
 <div id="detail"><span id="round"></span><span id="lp"></span></div>
 </section>
-<div id="instruction">Steuerung: ◀ ▶ Aktion wählen · A / Enter bestätigen · B / Escape zurück zur Auswahl · START Neustart</div>
-<div id="tiny">Eigenständiger Prototyp – 2 Runden, Kael kontert automatisch. Kein endgültiges Balancing.</div>
+<div id="instruction">Steuerung: ◀ ▶ Aktion wählen · A / Enter bestätigen · START / R Neustart · Gegner zieht automatisch</div>
+<div id="tiny">Eigenständiger Prototyp – 2 Runden, Der Startspieler wird ausgelost. Danach führt jeder genau eine Aktion pro Runde aus. Testwerte, kein endgültiges Balancing.</div>
 </main>
-<script src="../../x/battle.js?v=demo1"></script>
+<script src="../../x/battle.js?v=demo2"></script>
+<script src="./turn-system.js?v=demo2"></script>
 <script>
 (function(){
 'use strict';
-var engine=window.ETARIUM_BATTLE,canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+var engine=window.ETARIUM_BATTLE,turns=window.ETARIUM_TURN_SYSTEM.create(),canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
 var headline=document.getElementById('headline'),message=document.getElementById('message'),moves=document.getElementById('moves'),next=document.getElementById('next'),restart=document.getElementById('restart'),round=document.getElementById('round'),lp=document.getElementById('lp');
-var buttons=Array.from(document.querySelectorAll('[data-move]')),selected=0,phase='choice',actionsTaken=0;
+var buttons=Array.from(document.querySelectorAll('[data-move]')),selected=0,epoch=0,actionLocked=false;
+next.hidden=true;
 function select(i){selected=(i+buttons.length)%buttons.length;buttons.forEach(function(b,j){b.classList.toggle('selected',selected===j)})}
-function status(){var c=engine.getState();round.textContent='Runde '+Math.min(c.round,2)+' von 2';lp.textContent='LP '+c.playerHP+' · Gegner '+c.enemyHP}
+function sync(){
+ var s=turns.getState();
+ engine.state.playerHP=s.playerHP;engine.state.enemyHP=s.enemyHP;engine.state.round=s.round;
+ round.textContent='Runde '+s.round+' / '+s.maxRounds+' · Beginn: '+(s.starter==='player'?'Du':'Kael');
+ lp.textContent='LP '+s.playerHP+' · Gegner '+s.enemyHP;
+ return s
+}
+function show(){
+ var s=sync();
+ moves.hidden=s.phase!=='running'||s.turn!=='player'||actionLocked;
+ restart.hidden=s.phase!=='finished';
+ next.hidden=true;
+ if(s.phase==='finished'){
+  headline.textContent=s.winner==='player'?'SIEG!':s.winner==='enemy'?'Niederlage':'Unentschieden';
+  message.textContent=s.lastMessage+' · Der Trainingskampf ist beendet.';
+ }else{
+  headline.textContent='Runde '+s.round+' · '+(s.turn==='player'?'Dein Zug':'Kaels Zug');
+  message.textContent=s.lastMessage+(s.turn==='enemy'?' Kael wählt eine Aktion…':' Wähle deine Aktion.');
+ }
+}
+function enemyAuto(token){
+ var s=turns.getState();
+ if(s.phase!=='running'||s.turn!=='enemy')return;
+ actionLocked=true;show();
+ window.setTimeout(function(){
+  if(token!==epoch)return;
+  var done=turns.enemy();actionLocked=false;
+  if(done){sync();show();if(done.state.phase==='running'&&done.state.turn==='enemy')enemyAuto(token)}
+ },650);
+}
 function begin(){
- engine.enter('Kael',performance.now());phase='choice';actionsTaken=0;select(0);
- headline.textContent='Kael fordert dich heraus';message.textContent='Der Trainingskampf beginnt sofort. Wähle deine erste Aktion.';
- moves.hidden=false;next.hidden=true;restart.hidden=true;status()
+ epoch++;actionLocked=false;engine.enter('Kael',performance.now());
+ turns.start();select(0);show();
+ if(turns.getState().turn==='enemy')enemyAuto(epoch);
+ return turns.getState()
 }
 function choose(key){
- if(phase!=='choice')return false;
- var result=engine.act(key);if(!result)return false;
- actionsTaken++;
- message.textContent=result.action+' '+result.counter;
- moves.hidden=true;status();
- if(result.finished){
-  phase='victory';engine.leave();
-  headline.textContent='SIEG! · Trainingskampf beendet';
-  message.textContent='Du gewinnst nach zwei Runden. '+result.action+' '+result.counter;
-  restart.hidden=false;next.hidden=true;
- }else{
-  phase='counter';headline.textContent='Kael kontert · Runde 1';next.hidden=false;
- }
+ if(actionLocked)return false;
+ var result=turns.player(key);
+ if(!result)return false;
+ show();if(result.state.phase==='running'&&result.state.turn==='enemy')enemyAuto(epoch);
  return true
 }
-function advance(){if(phase!=='counter')return false;engine.next();phase='choice';headline.textContent='Runde 2 · Dein Zug';message.textContent='Kael wartet. Wähle deine zweite Aktion.';moves.hidden=false;next.hidden=true;status();return true}
-function confirm(){if(phase==='choice')choose(buttons[selected].dataset.move);else if(phase==='counter')advance();else if(phase==='victory')begin()}
+function confirm(){
+ var s=turns.getState();
+ if(s.phase==='finished')begin();
+ else if(s.turn==='player')choose(buttons[selected].dataset.move)
+}
 buttons.forEach(function(b,i){b.addEventListener('click',function(){select(i);choose(b.dataset.move)})});
-next.addEventListener('click',advance);restart.addEventListener('click',begin);
+restart.addEventListener('click',begin);
 document.addEventListener('keydown',function(e){
  var k=e.key;
- if(k==='ArrowLeft'||k==='ArrowUp'){e.preventDefault();if(phase==='choice')select(selected-1)}
- if(k==='ArrowRight'||k==='ArrowDown'){e.preventDefault();if(phase==='choice')select(selected+1)}
+ if(k==='ArrowLeft'||k==='ArrowUp'){e.preventDefault();if(turns.getState().turn==='player')select(selected-1)}
+ if(k==='ArrowRight'||k==='ArrowDown'){e.preventDefault();if(turns.getState().turn==='player')select(selected+1)}
  if(k==='Enter'||k===' '||k.toLowerCase()==='a'){e.preventDefault();confirm()}
- if(k==='Escape'||k.toLowerCase()==='b'){if(phase==='counter'){e.preventDefault();phase='choice';moves.hidden=false;next.hidden=true;headline.textContent='Runde 1 · Ergebnis';message.textContent='Die erste Aktion wurde bereits ausgeführt. Drücke Weiter, um Runde 2 zu beginnen.';phase='counter';moves.hidden=true;next.hidden=false}}
- if(k.toLowerCase()==='s')begin()
+ if(k.toLowerCase()==='r'||k.toLowerCase()==='s'){e.preventDefault();begin()}
 });
 function render(t){engine.draw(ctx,512,384,t);requestAnimationFrame(render)}
-window.etariumBattleDemo={reset:begin,choose:choose,advance:advance,getState:function(){return {phase:phase,actionsTaken:actionsTaken,battle:engine.getState()}}};
+window.etariumBattleDemo={reset:begin,choose:choose,getState:turns.getState,
+ getSelected:function(){return buttons[selected].dataset.move}};
 begin();requestAnimationFrame(render)
 })();
-</script></body></html>
+</body></html>
