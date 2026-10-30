@@ -26,12 +26,14 @@ function create(options){
   enemyMage:[{key:'command',name:'Angriffsbefehl',buff:6,cost:8},{key:'heal',name:'Genesung',heal:16,cost:14},{key:'ward',name:'Schutzbefehl',shield:12,cost:9},{key:'focus',name:'Äther sammeln',restore:16,cost:0}]
  };
  var state;
+ var reserveNames={playerSpirit1:['Ersatzgeist A','Dein Geist I'],playerSpirit2:['Ersatzgeist B','Dein Geist II'],playerSpirit3:['Ersatzgeist C','Dein Geist III']};
+ var reserveStats={playerSpirit1:{hp:85,max:85,mana:55,manaMax:55},playerSpirit2:{hp:88,max:88,mana:60,manaMax:60},playerSpirit3:{hp:92,max:92,mana:65,manaMax:65}};
  function isMage(id){return id.endsWith('Mage')}
  function modeMoves(id){return isMage(id)&&state.mageMode[id]==='passive'?passiveMoves[id]:moves[id]}
  function team(id){return id.slice(0,6)==='player'?'player':'enemy'}
  function roll(n){return Math.max(0,Math.min(n-1,Math.floor(random()*n)))}
  function order(){var sorted=ids.slice().sort(function(a,b){return speed[b]-speed[a]});for(var i=0;i<sorted.length;){var j=i+1;while(j<sorted.length&&speed[sorted[i]]===speed[sorted[j]])j++;for(var x=j-1;x>i;x--){var y=i+roll(x-i+1),tmp=sorted[x];sorted[x]=sorted[y];sorted[y]=tmp}i=j}return sorted}
- function clone(){return {round:state.round,turn:state.turn,phase:state.phase,order:state.order.slice(),acted:state.acted.slice(),hp:Object.assign({},state.hp),mana:Object.assign({},state.mana),shield:Object.assign({},state.shield),buff:Object.assign({},state.buff),weak:Object.assign({},state.weak),mageMode:Object.assign({},state.mageMode),lastSwitchRound:Object.assign({},state.lastSwitchRound),speed:Object.assign({},speed),lastMessage:state.lastMessage,history:state.history.slice(),winner:state.winner,defeatReason:state.defeatReason,battleType:battleType,items:Object.assign({},state.items),reserve:Object.assign({},state.reserve)}}
+ function clone(){return {round:state.round,turn:state.turn,phase:state.phase,order:state.order.slice(),acted:state.acted.slice(),hp:Object.assign({},state.hp),mana:Object.assign({},state.mana),shield:Object.assign({},state.shield),buff:Object.assign({},state.buff),weak:Object.assign({},state.weak),mageMode:Object.assign({},state.mageMode),lastSwitchRound:Object.assign({},state.lastSwitchRound),speed:Object.assign({},speed),lastMessage:state.lastMessage,history:state.history.slice(),winner:state.winner,defeatReason:state.defeatReason,battleType:battleType,items:Object.assign({},state.items),reserve:Object.assign({},state.reserve),names:Object.assign({},names)}}
  function alive(id){return state.hp[id]>0}
  function available(id){
   var set=(modeMoves(id)||[]).map(function(m){return Object.assign({},m)});
@@ -91,7 +93,10 @@ function create(options){
    state.phase='finished';state.winner='escaped';state.defeatReason='escape';
   }
   else if(m.swap){
-   state.reserve[actor]--;
+   var next=reserveStats[actor],old={hp:state.hp[actor],max:hpMax[actor],mana:state.mana[actor],manaMax:manaMax[actor]};
+   state.hp[actor]=next.hp;hpMax[actor]=next.max;state.mana[actor]=next.mana;manaMax[actor]=next.manaMax;
+   reserveStats[actor]=old;state.reserve[actor]=0;
+   names[actor]=reserveNames[actor][0];
    state.shield[actor]=0;state.buff[actor]=0;state.weak[actor]=0;
   }
   else if(m.item){
