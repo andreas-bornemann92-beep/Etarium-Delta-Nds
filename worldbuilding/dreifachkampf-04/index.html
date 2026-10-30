@@ -1,0 +1,300 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101014"><title>Etarium | Dreifachkampf 04 Worldbuilding</title>
+<style>
+:root{color-scheme:dark;--bg:#101824;--box:#1c2b3b;--light:#eee5d5;--gold:#e7c596;--red:#ba6c73}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#253b4c,#101824 72%);color:var(--light);font:14px system-ui,-apple-system,sans-serif}
+main{max-width:720px;margin:auto;padding:10px 10px 25px}header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #805063;padding:4px 5px 9px;margin-bottom:10px}
+h1{font:700 26px Georgia,serif;color:#f0b9c0;letter-spacing:.15em;margin:0}header small{font-size:10px;color:#b9c6cf;text-align:right}
+#groups{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}.team{background:#1e2c3e;border:1px solid #6c7685;border-radius:10px;padding:8px}
+.team h2{font-size:12px;color:#f4d8b2;margin:0 0 6px}.unit{padding:6px 3px;border-top:1px solid #ffffff20}.unit:first-of-type{border-top:0}
+.unit-name{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px}.unit-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.unit-name span{font-size:10px;color:#c9c9d4;flex-shrink:0}
+.track{height:6px;background:#354151;border-radius:6px;overflow:hidden;margin:4px 0 3px}.track i{height:100%;display:block;width:100%;background:#68bb8c;transition:width .2s}.track.magic i{background:#75a5e5}.team.opponent .track:not(.magic) i{background:#d58278}
+.unit.current .unit-name b{color:#ffcf8f}.unit.ko{opacity:.38}
+#arena{position:relative;border:2px solid #a96876;border-radius:13px;overflow:hidden;background:#8cbeb1;aspect-ratio:4/3}canvas{width:100%;height:100%;display:block}
+#sequence{display:flex;gap:5px;overflow-x:auto;padding:7px 0 10px;scrollbar-width:thin}.token{flex:0 0 auto;min-width:70px;border-radius:6px;border:1px solid #6b7a87;background:#26384a;padding:6px 5px;text-align:center;font-size:10px}.token.turn{border-color:#f2c289;background:#75475c}.token.ko{opacity:.35}
+#ui{border:1px solid #805a70;border-radius:11px;background:var(--box);padding:10px}
+#turnline{display:flex;justify-content:space-between;gap:5px;color:var(--gold);font-weight:750;font-size:12px}
+#info{min-height:44px;margin:9px 0;color:#e5e5dd;line-height:1.5}
+#skills,#targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#skills button,#targets button,#restart{border:1px solid #75879b;border-radius:9px;background:#304257;color:white;min-height:49px;font:700 12px system-ui;padding:6px}
+#skills button small{display:block;color:#bdd0df;font-weight:400;font-size:10px;margin-top:2px}
+#skills button.selected,#targets button.selected{border-color:#ffd9a0;background:#704356}
+#skills button:disabled,#targets button:disabled{opacity:.3}
+#targets{grid-template-columns:repeat(2,minmax(0,1fr))}
+#targets button{font-size:11px;min-height:47px}
+#labeltargets{font-size:11px;color:#d9c5b2;margin:10px 0 6px}
+#feedback{border:2px solid #a8e3a7;border-radius:8px;padding:12px;background:#204937;color:#fff7d7;font-size:14px;font-weight:800;margin:8px 0}
+#wait{border:1px dashed #91a0ad;border-radius:9px;text-align:center;padding:14px;color:#e2ceac}
+#restart{background:#85495d;width:100%;margin-top:8px}
+[hidden]{display:none!important}
+
+details{margin-top:9px;font-size:12px;color:#aebecb}details li{margin:5px 0}
+footer{text-align:center;margin-top:12px;font-size:11px;color:#9fb2be;line-height:1.5}
+/* Bedienoberfläche V2: Anthrazit, Rot und großzügige Touch-Flächen. */
+:root{--bg:#101014;--box:#1b1c22;--light:#f5f1ed;--gold:#f0c7ad;--red:#bb354e}
+body{background:linear-gradient(155deg,#25252b 0%,#121318 42%,#0b0c10 100%);color:var(--light)}
+main{max-width:760px;padding:12px 12px calc(env(safe-area-inset-bottom) + 22px)}
+header{background:#1a1b20;border:1px solid #63303a;border-radius:13px;padding:13px 15px;margin-bottom:10px}
+h1{color:#f4f0ed;letter-spacing:.11em;font-size:27px}
+header small{color:#e3a5ac}
+#groups{gap:8px;margin-bottom:10px}
+.team{background:linear-gradient(#25262d,#1a1c22);border-color:#414550;border-radius:12px;padding:9px}
+.team.opponent{border-top:3px solid #c15059}.team:not(.opponent){border-top:3px solid #658a9b}
+.team h2{font-size:11px;letter-spacing:.13em;margin:0 0 8px;color:#ddd5d0}
+.unit{padding:8px 3px;border-top-color:#ffffff12}
+.unit.current{background:#453039;border-radius:8px;padding-left:6px;padding-right:6px;box-shadow:inset 3px 0 #f2bc84}
+.unit-name{display:block}.unit-name b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unit-name span{display:block;margin-top:3px;font-size:10px;color:#c2c5d0}
+.track{height:8px;margin:6px 0 4px;background:#11161d}
+.track.magic{height:6px}.track.magic i{background:#769be8}
+.team.opponent .track:not(.magic) i{background:#c85b65}
+.team:not(.opponent) .track:not(.magic) i{background:#73b99c}
+#arena{border:2px solid #8c3d4c;border-radius:14px;box-shadow:0 5px 22px #0007}
+#arena-label{position:absolute;z-index:2;top:10px;left:10px;background:#111827bb;color:#fae5d8;border-radius:6px;padding:5px 8px;font-weight:800;font-size:10px;letter-spacing:.08em}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:11px 2px 7px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#edbdc4}
+.section-title span:last-child{font-size:9px;font-weight:600;color:#9ca6b4;text-align:right}
+#sequence{padding:3px 0 9px;gap:6px}
+.token{background:#242a33;border-color:#434750;border-radius:8px;min-width:105px;padding:9px 7px;font-size:11px;color:#dde0e8}
+.token.turn{background:#753b4b;border-color:#e7a7a6;box-shadow:0 0 0 1px #e7a7a622}
+#ui{background:#1b1d23;border:1px solid #4a3b42;border-radius:14px;padding:13px}
+.command-head{margin-top:0}
+#turnline{background:#2d2831;padding:11px;border-radius:8px;align-items:center;font-size:13px}
+#actor{text-align:right;color:#f7e2c0}
+#info{font-size:13px;line-height:1.55;margin:12px 2px}
+#skills,#targets{gap:9px}
+#skills button,#targets button{background:linear-gradient(180deg,#363d4b,#292e39);border:1px solid #677080;border-radius:11px;color:#f4f2f0;min-height:65px;padding:10px 8px;font-size:14px;font-weight:750;touch-action:manipulation}
+#skills button small{font-size:11px;color:#c4d1e2;margin-top:5px}
+#skills button.selected,#targets button.selected{background:#703746;border-color:#f1b5a2;box-shadow:inset 0 0 0 1px #e2a59a}
+#targets button{min-height:59px;font-size:12px;text-align:center}
+#targets button.opponent{border-left:3px solid #bd5661}
+#targets button.ally{border-left:3px solid #6c9fac}
+#skills button:disabled,#targets button:disabled{opacity:.33}
+#labeltargets{margin:16px 2px 8px}
+#feedback{border:1px solid #749e90;background:#203b35;color:#e6f7ed;border-radius:9px;font-size:13px}
+#wait{border-color:#6c707e;background:#282b34}
+#restart{min-height:55px;border-radius:10px;background:#9c354a}
+
+
+#skills button:active,#targets button:active{filter:brightness(1.25)}
+
+details{background:#1a1b21;border:1px solid #31343d;border-radius:10px;padding:12px}
+footer{color:#b5aeb3}
+@media(max-width:380px){main{padding:8px 7px calc(env(safe-area-inset-bottom) + 16px)}.team{padding:6px}.unit-name b{font-size:10px}.unit-name span{font-size:9px}#skills button,#targets button{font-size:12px;padding:7px 4px}.section-title span:last-child{font-size:8px}}
+#modebar{display:flex;gap:8px;margin-bottom:9px}
+#modebar span{flex:1;text-align:center;border:1px solid #8d4653;background:#522b39;border-radius:9px;padding:9px 5px;font-size:10px;font-weight:850}
+#modebar span.passive{background:#263e46;border-color:#6ca2b2;color:#d3f1f9}
+#modebar span.active{color:#ffd6c8}
+
+#battle-types{display:flex;gap:8px;margin-bottom:9px}
+#battle-types a{flex:1;border:1px solid #62545e;border-radius:10px;background:#242730;padding:11px 8px;text-align:center;text-decoration:none;color:#e8dde1;font-weight:800;font-size:12px}
+#battle-types a.chosen{background:#743749;border-color:#ecabb0;color:#fff}
+#categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#categories button{border:1px solid #995567;border-radius:11px;background:linear-gradient(145deg,#462d39,#292c37);color:#fff1ec;min-height:72px;font-size:15px;font-weight:800;padding:10px 8px;touch-action:manipulation}
+#categories button small{display:block;font-size:10px;color:#d2c3cb;margin-top:5px;font-weight:500}
+#categories button:disabled{opacity:.32}
+#categories button:active{filter:brightness(1.25)}
+#back{width:100%;border-radius:9px;background:#33343d;border:1px solid #77717b;color:#f5e8e7;padding:11px;margin-bottom:9px;font-size:13px;font-weight:750}
+#submenu #skills{margin-bottom:4px}
+</style></head>
+<body><main><header><h1>ETARIUM</h1><small>WORLDBUILDING<br>DREIFACHKAMPF 04</small></header>
+<section id="groups" aria-label="Lebenspunkte und Äther der acht Kämpfer">
+<div class="team opponent" id="enemyteam"><h2>KAELS TEAM</h2></div>
+<div class="team" id="playerteam"><h2>DEIN TEAM</h2></div>
+</section>
+<div id="battle-types" aria-label="Kampftyp für den Test"><a href="?battle=trainer" id="trainerLink">Trainerkampf</a><a href="?battle=wild" id="wildLink">Wildkampf</a></div><div id="modebar"><span id="modePlayer">DEIN MAGIER · AKTIV</span><span id="modeEnemy">KAEL · AKTIV</span></div>
+<div id="arena"><div id="arena-label">KAMPFARENA · 3 GEISTER + MAGIER</div><canvas id="battle" width="512" height="384" aria-label="Drei Geister und ein Magier pro Team"></canvas></div>
+
+<section id="ui"><div class="section-title command-head"><span>KOMMANDOZENTRALE</span><span>AKTIONEN & ZIELE</span></div>
+<div id="info" aria-live="polite">Dreifachkampf beginnt.</div><div id="feedback" role="status" aria-live="assertive" hidden></div>
+<div class="section-title"><span>BEFEHL WÄHLEN</span><span id="menuhint">6 KATEGORIEN</span></div>
+<div id="categories" aria-label="Kampfbefehle"></div>
+<div id="submenu" hidden><button type="button" id="back">‹ Zurück zu Befehlen</button><div id="skills" aria-label="Aktionen der gewählten Kategorie"></div></div><div id="labeltargets" class="section-title"><span>ZIELAUSWAHL</span><span>ANTIPPEN FÜHRT DIREKT AUS</span></div>
+<div id="targets" aria-label="Alle acht möglichen Ziele"></div>
+<div id="wait" hidden>Der Gegner führt seinen Zug aus …</div><button id="restart" hidden>Kampf neu starten</button>
+</section>
+
+<details><summary>Kampfprotokoll anzeigen</summary><ol id="log"></ol></details>
+<footer>Kampftest 04 · Kategorieauswahl je eigener Aktion · Trainer- und Wildkampf<br>Heiltrank und Reservegeist sind experimentelle Demo-Werte, kein verbindlicher Kanon<br>AKTIV: Magier angreifbar, Offensivzauber und Kontrolle · PASSIV: nicht angreifbar, Befehle und Schutz<br>Wechsel benötigt den eigenen Zug und verbraucht die Hauptaktion · Fangregeln noch offen<br>KAMPFTEST · RUNDE UND INITIATIVE IM HINTERGRUND · Anthrazit/Rot · iPhone<br>Sieg: gegnerischer Magier K. o. ODER alle drei gegnerischen Geister K. o.<br>3 Geister + 1 Magier pro Team · individuelle Geschwindigkeit · Zielauswahl · LP und Äther<br>Worldbuilding-Testwerte, kein verbindlicher Etarium-Kanon</footer></main>
+<script src="./engine.js?v=category-menu-1"></script>
+<script>
+(function(){'use strict';
+var battleType=new URLSearchParams(window.location.search).get('battle')==='wild'?'wild':'trainer';
+var combat=window.ETARIUM_TRIPLE_BATTLE.create({battleType:battleType}),cv=document.getElementById('battle'),ctx=cv.getContext('2d'),IDs=['enemySpirit1','enemySpirit2','enemySpirit3','enemyMage','playerSpirit1','playerSpirit2','playerSpirit3','playerMage'];
+var skills=document.getElementById('skills'),targets=document.getElementById('targets'),selected=0,aim=null,timer=0,locked=false,category=null;
+function el(id){return document.getElementById(id)}
+function screenName(id){return combat.names[id]}
+function card(id){var parent=el(id.startsWith('enemy')?'enemyteam':'playerteam'),div=document.createElement('div');div.className='unit';div.id='stat-'+id;div.innerHTML='<div class="unit-name"><b></b><span class="nums"></span></div><div class="track"><i class="health"></i></div><div class="track magic"><i class="mana"></i></div>';parent.appendChild(div)}
+IDs.forEach(card);
+var CATEGORIES=[
+ {id:'fight',label:'⚔ Kampf',hint:'Angriffe ohne Äther'},
+ {id:'magic',label:'✦ Magie',hint:'Zauber und Äther'},
+ {id:'special',label:'◆ Spezialfähigkeit',hint:'Spezialaktionen / Modus'},
+ {id:'item',label:'▣ Item',hint:'Gegenstand einsetzen'},
+ {id:'swap',label:'↔ Wechsel',hint:'Reservegeist einsetzen'},
+ {id:'flee',label:'➜ Fliehen',hint:'Nur im Wildkampf'}
+];
+function kind(m){
+ if(m.key==='flee')return 'flee';
+ if(m.key==='swap')return 'swap';
+ if(m.item)return 'item';
+ if(m.switch||m.weak||m.buff)return 'special';
+ if(m.cost===0&&m.damage)return 'fight';
+ return 'magic';
+}
+function actionOptions(){
+ var s=combat.getState();
+ if(!category||!s.turn||!s.turn.startsWith('player'))return [];
+ return combat.available(s.turn).filter(function(m){return kind(m)===category})
+}
+function validTargets(){
+ var s=combat.getState(),m=actionOptions()[selected];
+ return m?combat.targets(s.turn,m.key):[]
+}
+function chooseCategory(id){
+ var s=combat.getState();
+ if(s.phase!=='running'||!s.turn||!s.turn.startsWith('player')||locked)return false;
+ if(id==='flee'&&battleType!=='wild')return false;
+ if(id==='flee'){category='flee';selected=0;aim=s.turn;return act()}
+ if(!combat.available(s.turn).some(function(m){return kind(m)===id&&combat.targets(s.turn,m.key).length}))return false;
+ category=id;selected=0;aim=null;paint();return true
+}
+function backMenu(){category=null;selected=0;aim=null;paint()}
+function chooseSkill(n){
+ var opts=actionOptions();if(!opts.length)return;
+ selected=(n+opts.length)%opts.length;aim=validTargets()[0]||null;paint()
+}
+function chooseTarget(t){if(!validTargets().includes(t))return false;aim=t;return act()}
+function paint(){
+ var s=combat.getState(),player=s.phase==='running'&&s.turn&&s.turn.startsWith('player')&&!locked;
+ IDs.forEach(function(id){
+  var div=el('stat-'+id);div.className='unit'+(s.turn===id?' current':'')+(s.hp[id]<=0?' ko':'');
+  div.hidden=battleType==='wild'&&id.startsWith('enemy')&&id!=='enemySpirit1';
+  div.querySelector('b').textContent=screenName(id)+(id.endsWith('Mage')?' · '+(s.mageMode[id]==='active'?'AKTIV':'PASSIV'):'');div.querySelector('b').title='Geschwindigkeit '+s.speed[id];
+  div.querySelector('.nums').textContent=s.hp[id]+'/'+combat.hpMax[id]+' LP · '+s.mana[id]+'/'+combat.manaMax[id]+' Ä · '+s.speed[id]+' G';
+  div.querySelector('.health').style.width=s.hp[id]/combat.hpMax[id]*100+'%';
+  div.querySelector('.mana').style.width=s.mana[id]/combat.manaMax[id]*100+'%';
+ });
+ el('modePlayer').textContent='DEIN MAGIER · '+(s.mageMode.playerMage==='active'?'AKTIV · ANGREIFBAR':'PASSIV · GESCHÜTZT');
+ el('modeEnemy').textContent=battleType==='wild'?'WILDER GEIST · KEIN MAGIER':'KAEL · '+(s.mageMode.enemyMage==='active'?'AKTIV · ANGREIFBAR':'PASSIV · GESCHÜTZT');
+ el('modePlayer').className=s.mageMode.playerMage;
+ el('modeEnemy').className=s.mageMode.enemyMage;
+ if(s.phase==='finished'){
+  el('info').textContent=(s.winner==='escaped'?'FLUCHT GELUNGEN.':s.winner==='player'?'SIEG! Dein Team gewinnt.':s.winner==='enemy'?'NIEDERLAGE. Kael gewinnt.':'UNENTSCHIEDEN.')+' '+s.lastMessage;
+ }else el('info').textContent=s.lastMessage+(player?' Wähle zuerst einen Befehl.':'');
+ el('wait').hidden=s.phase!=='running'||!s.turn||!s.turn.startsWith('enemy');
+ el('restart').hidden=s.phase!=='finished';
+ var main=player&&!category,detail=player&&!!category;
+ el('categories').hidden=!main;el('submenu').hidden=!detail;
+ targets.hidden=!detail;el('labeltargets').hidden=!detail;
+ el('menuhint').textContent=detail?(CATEGORIES.find(function(c){return c.id===category})||{}).label:'6 KATEGORIEN';
+ var categoriesEl=el('categories');categoriesEl.replaceChildren();
+ if(main){
+  CATEGORIES.forEach(function(c){
+   var btn=document.createElement('button');btn.type='button';
+   var possible=combat.available(s.turn).filter(function(m){return kind(m)===c.id&&combat.targets(s.turn,m.key).length>0});
+   btn.disabled=c.id==='flee'&&battleType!=='wild'||possible.length===0;
+   btn.className='category-'+c.id;
+   btn.textContent=c.label;
+   var small=document.createElement('small');small.textContent=c.id==='flee'&&battleType!=='wild'?'Im Trainerkampf gesperrt':possible.length?c.hint:'Keine Aktion verfügbar';
+   btn.appendChild(small);
+   btn.addEventListener('click',function(){chooseCategory(c.id)});
+   categoriesEl.appendChild(btn)
+  })
+ }
+ var available=detail?actionOptions():[];
+ skills.replaceChildren();
+ available.forEach(function(m,i){
+  var btn=document.createElement('button');btn.type='button';
+  btn.className=i===selected?'selected':'';btn.disabled=combat.targets(s.turn,m.key).length===0;
+  btn.textContent=m.name;
+  var sub=document.createElement('small');
+  sub.textContent=m.switch?'Hauptaktion · Moduswechsel':m.swap?'Reservegeist (Test)':m.item?'20 LP · '+s.items.potion+'× vorhanden':m.restore?'+'+m.restore+' Äther':m.cost+' Äther · '+(m.damage?'−'+m.damage+' LP':m.heal?'+'+m.heal+' LP':m.shield?'Schutz '+m.shield:m.buff?'Angriff +'+m.buff:m.weak?'Angriff −'+m.weak:'Aktion');
+  btn.appendChild(sub);
+  btn.addEventListener('click',function(){selected=i;var legal=combat.targets(s.turn,m.key);if(!legal.length)return;if(!legal.includes(aim))aim=legal[0];act()});
+  skills.appendChild(btn)
+ });
+ var valid=detail?validTargets():[];
+ if(!valid.includes(aim))aim=valid[0]||null;
+ targets.replaceChildren();
+ if(detail)IDs.forEach(function(id){
+  if(battleType==='wild'&&id.startsWith('enemy')&&id!=='enemySpirit1')return;
+  var btn=document.createElement('button');btn.type='button';btn.disabled=!valid.includes(id);
+  btn.className=(id===aim?'selected ':'')+(id.startsWith('enemy')?'opponent':'ally');
+  btn.textContent=screenName(id)+' · '+s.hp[id]+' LP';
+  btn.addEventListener('click',function(){chooseTarget(id)});targets.appendChild(btn)
+ });
+ var log=el('log');log.replaceChildren();s.history.slice(-20).forEach(function(x){var li=document.createElement('li');li.textContent='R'+x.round+': '+x.text;log.appendChild(li)})
+}
+function enemyTurn(token){
+ var s=combat.getState();if(s.phase!=='running'||!s.turn.startsWith('enemy')||locked)return;
+ locked=true;paint();
+ setTimeout(function(){if(token!==timer)return;var result=combat.enemy();locked=false;if(result){selected=0;aim=null;category=null;paint();showFeedback('⚔ '+result.entry.text);if(result.state.phase==='running'&&result.state.turn.startsWith('enemy'))enemyTurn(token)}},480)
+}
+function begin(){timer++;locked=false;selected=0;aim=null;category=null;el('feedback').hidden=true;combat.start();paint();if(combat.getState().turn.startsWith('enemy'))enemyTurn(timer)}
+function showFeedback(text){
+ el('feedback').hidden=false;el('feedback').textContent=text;
+}
+function act(){
+ var s=combat.getState();if(s.phase==='finished'){begin();return true}
+ if(locked||!s.turn||!s.turn.startsWith('player'))return false;
+ var m=actionOptions()[selected];if(!m)return false;
+ var legal=combat.targets(s.turn,m.key);
+ if(!legal.includes(aim))aim=legal[0]||null;
+ if(!aim){showFeedback('Diese Aktion ist gerade nicht möglich.');return false}
+ var result=combat.player(m.key,aim);
+ if(!result){showFeedback('Zug nicht ausgeführt. Wähle ein gültiges Ziel.');return false}
+ selected=0;aim=null;category=null;paint();
+ showFeedback('✓ '+result.entry.text);
+ if(result.state.phase==='running'&&result.state.turn.startsWith('enemy'))enemyTurn(timer);
+ return true
+}
+el('restart').addEventListener('click',begin);
+el('back').addEventListener('click',backMenu);
+el('trainerLink').className=battleType==='trainer'?'chosen':'';
+el('wildLink').className=battleType==='wild'?'chosen':'';
+document.addEventListener('keydown',function(e){
+ var k=e.key.toLowerCase(),state=combat.getState();
+ if(k==='arrowleft'||k==='arrowright'){
+  if(state.phase==='running'&&state.turn&&state.turn.startsWith('player')&&!locked){e.preventDefault();chooseSkill(selected+(k==='arrowleft'?-1:1))}
+ }
+ if((k==='enter'||k==='a')&&category){e.preventDefault();act()}
+ if(k==='r'||k==='s'){e.preventDefault();begin()}
+});
+function ellipse(x,y,rx,ry,color){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
+function actor(x,y,scale,color,ghost,enemy,t,dead){
+ if(dead)return;
+ ctx.save();ctx.translate(x,y+Math.sin(t/470+x)*2);ctx.scale(scale,scale);
+ ellipse(0,5,33,9,'#283f5455');
+ if(ghost){
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-24,-11);ctx.lineTo(-31,-41);ctx.lineTo(-17,-65);ctx.lineTo(-5,-55);ctx.lineTo(11,-71);ctx.lineTo(24,-37);ctx.lineTo(25,-8);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#d6e7df';ctx.beginPath();ctx.ellipse(0,-35,17,25,0,0,Math.PI*2);ctx.fill();
+  if(enemy){ctx.fillStyle='#263f5e';ctx.fillRect(-9,-41,5,5);ctx.fillRect(7,-41,5,5)}
+  else {ctx.fillStyle=color;ctx.fillRect(-17,-48,34,13)}
+ }else{
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-15,-33);ctx.lineTo(16,-33);ctx.lineTo(24,0);ctx.lineTo(-24,0);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#d7b498';ctx.beginPath();ctx.arc(0,-41,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#302c36';ctx.fillRect(-11,-52,22,8);
+  ctx.fillStyle='#d8a976';ctx.fillRect(18,-48,3,50);
+  ctx.fillStyle='#a1dbe7';ctx.fillRect(14,-51,11,9)
+ }
+ ctx.restore()
+}
+function render(t){
+ var s=combat.getState();
+ var bg=ctx.createLinearGradient(0,0,0,384);bg.addColorStop(0,'#78c4cd');bg.addColorStop(.55,'#b8dfb2');bg.addColorStop(1,'#679a7d');ctx.fillStyle=bg;ctx.fillRect(0,0,512,384);
+ ctx.fillStyle='#7bab96';ctx.beginPath();ctx.moveTo(0,177);ctx.lineTo(98,121);ctx.lineTo(194,172);ctx.lineTo(280,118);ctx.lineTo(398,176);ctx.lineTo(512,119);ctx.lineTo(512,263);ctx.lineTo(0,263);ctx.fill();
+ ellipse(148,285,150,40,'#d5d9af');ellipse(361,215,148,32,'#e1dfbb');
+ actor(284,188,.68,'#7b96c6',true,true,t,s.hp.enemySpirit1===0);
+ actor(373,186,.64,'#9e85b7',true,true,t,s.hp.enemySpirit2===0);
+ actor(447,191,.61,'#85aaa3',true,true,t,s.hp.enemySpirit3===0);
+ actor(496,234,.66,'#873c56',false,true,t,s.hp.enemyMage===0);
+ actor(92,286,.98,'#91653f',true,false,t,s.hp.playerSpirit1===0);
+ actor(178,297,.94,'#70a995',true,false,t,s.hp.playerSpirit2===0);
+ actor(264,299,.89,'#826ab4',true,false,t,s.hp.playerSpirit3===0);
+ actor(25,338,.78,'#355e88',false,false,t,s.hp.playerMage===0);
+ 
+ requestAnimationFrame(render)
+}
+window.etariumTripleDemo={getState:combat.getState,chooseCategory:chooseCategory,backMenu:backMenu,chooseTarget:chooseTarget,act:act,restart:begin,clickSkill:function(i){selected=i;var s=combat.getState(),m=actionOptions()[i];if(!m)return false;aim=combat.targets(s.turn,m.key)[0]||null;return act()},getCategory:function(){return category}};
+begin();requestAnimationFrame(render)
+})();
+</script></body></html>
