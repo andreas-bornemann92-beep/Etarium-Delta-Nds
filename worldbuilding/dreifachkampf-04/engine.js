@@ -28,6 +28,8 @@ function create(options){
  var state;
  var reserveNames={playerSpirit1:['Ersatzgeist A','Dein Geist I'],playerSpirit2:['Ersatzgeist B','Dein Geist II'],playerSpirit3:['Ersatzgeist C','Dein Geist III']};
  var reserveStats={playerSpirit1:{hp:85,max:85,mana:55,manaMax:55},playerSpirit2:{hp:88,max:88,mana:60,manaMax:60},playerSpirit3:{hp:92,max:92,mana:65,manaMax:65}};
+ var originalNames=Object.assign({},names),originalHP=Object.assign({},hpMax),originalMana=Object.assign({},manaMax);
+ var originalReserve=JSON.parse(JSON.stringify(reserveStats));
  function isMage(id){return id.endsWith('Mage')}
  function modeMoves(id){return isMage(id)&&state.mageMode[id]==='passive'?passiveMoves[id]:moves[id]}
  function team(id){return id.slice(0,6)==='player'?'player':'enemy'}
@@ -80,7 +82,10 @@ function create(options){
    var id=state.order[state.acted.length];if(alive(id)){state.turn=id;return}state.acted.push(id);
   }
  }
- function start(){state={round:1,turn:null,phase:'running',order:order(),acted:[],hp:Object.assign({},hpMax),mana:Object.assign({},manaMax),shield:Object.fromEntries(ids.map(function(x){return [x,0]})),buff:Object.fromEntries(ids.map(function(x){return [x,0]})),weak:Object.fromEntries(ids.map(function(x){return [x,0]})),mageMode:{playerMage:'active',enemyMage:'active'},lastSwitchRound:{playerMage:0,enemyMage:0},items:{potion:2},reserve:{playerSpirit1:1,playerSpirit2:1,playerSpirit3:1},lastMessage:'Dreifachkampf beginnt! Acht Kämpfer treten an.',history:[],winner:null,defeatReason:null};
+ function start(){
+  Object.assign(names,originalNames);Object.assign(hpMax,originalHP);Object.assign(manaMax,originalMana);
+  Object.keys(originalReserve).forEach(function(id){reserveStats[id]=Object.assign({},originalReserve[id])});
+  state={round:1,turn:null,phase:'running',order:order(),acted:[],hp:Object.assign({},hpMax),mana:Object.assign({},manaMax),shield:Object.fromEntries(ids.map(function(x){return [x,0]})),buff:Object.fromEntries(ids.map(function(x){return [x,0]})),weak:Object.fromEntries(ids.map(function(x){return [x,0]})),mageMode:{playerMage:'active',enemyMage:'active'},lastSwitchRound:{playerMage:0,enemyMage:0},items:{potion:2},reserve:{playerSpirit1:1,playerSpirit2:1,playerSpirit3:1},lastMessage:'Dreifachkampf beginnt! Acht Kämpfer treten an.',history:[],winner:null,defeatReason:null};
   if(battleType==='wild'){
    ['enemySpirit2','enemySpirit3','enemyMage'].forEach(function(id){state.hp[id]=0});
   }
