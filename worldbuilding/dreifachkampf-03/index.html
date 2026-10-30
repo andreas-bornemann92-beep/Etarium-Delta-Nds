@@ -26,8 +26,8 @@ h1{font:700 26px Georgia,serif;color:#f0b9c0;letter-spacing:.15em;margin:0}heade
 #wait{border:1px dashed #91a0ad;border-radius:9px;text-align:center;padding:14px;color:#e2ceac}
 #restart{background:#85495d;width:100%;margin-top:8px}
 [hidden]{display:none!important}
-#controls{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}#controls button{border:1px solid #60788b;border-radius:9px;background:#284052;color:#fff;min-height:44px;font-weight:800}
-#controls button:disabled{opacity:.35}details{margin-top:9px;font-size:12px;color:#aebecb}details li{margin:5px 0}
+
+details{margin-top:9px;font-size:12px;color:#aebecb}details li{margin:5px 0}
 footer{text-align:center;margin-top:12px;font-size:11px;color:#9fb2be;line-height:1.5}
 /* Bedienoberfläche V2: Anthrazit, Rot und großzügige Touch-Flächen. */
 :root{--bg:#101014;--box:#1b1c22;--light:#f5f1ed;--gold:#f0c7ad;--red:#bb354e}
@@ -72,10 +72,10 @@ header small{color:#e3a5ac}
 #feedback{border:1px solid #749e90;background:#203b35;color:#e6f7ed;border-radius:9px;font-size:13px}
 #wait{border-color:#6c707e;background:#282b34}
 #restart{min-height:55px;border-radius:10px;background:#9c354a}
-#controls{gap:8px}
-#controls button{min-height:54px;border-color:#8b4653;background:#30242d;border-radius:11px;font-size:16px}
-#controls button:active,#skills button:active,#targets button:active{filter:brightness(1.25)}
-#controls button:disabled{opacity:.35}
+
+
+#skills button:active,#targets button:active{filter:brightness(1.25)}
+
 details{background:#1a1b21;border:1px solid #31343d;border-radius:10px;padding:12px}
 footer{color:#b5aeb3}
 @media(max-width:380px){main{padding:8px 7px calc(env(safe-area-inset-bottom) + 16px)}.team{padding:6px}.unit-name b{font-size:10px}.unit-name span{font-size:9px}#skills button,#targets button{font-size:12px;padding:7px 4px}.section-title span:last-child{font-size:8px}}
@@ -98,7 +98,7 @@ footer{color:#b5aeb3}
 <div id="targets" aria-label="Alle acht möglichen Ziele"></div>
 <div id="wait" hidden>Der Gegner führt seinen Zug aus …</div><button id="restart" hidden>Kampf neu starten</button>
 </section>
-<nav id="controls"><button id="left">◀</button><button id="right">▶</button><button id="confirm">A</button><button id="start">START</button></nav>
+
 <details><summary>Kampfprotokoll anzeigen</summary><ol id="log"></ol></details>
 <footer>AKTIV: Magier angreifbar, Offensivzauber und Kontrolle · PASSIV: nicht angreifbar, Befehle und Schutz<br>Wechsel benötigt den eigenen Zug und verbraucht die Hauptaktion · Fangregeln noch offen<br>KAMPFTEST · RUNDE UND INITIATIVE IM HINTERGRUND · Anthrazit/Rot · iPhone<br>Sieg: gegnerischer Magier K. o. ODER alle drei gegnerischen Geister K. o.<br>3 Geister + 1 Magier pro Team · individuelle Geschwindigkeit · Zielauswahl · LP und Äther<br>Worldbuilding-Testwerte, kein verbindlicher Etarium-Kanon</footer></main>
 <script src="./engine.js?v=mage-mode-1"></script>
@@ -144,7 +144,7 @@ function paint(){
  targets.replaceChildren();
  IDs.forEach(function(id){var btn=document.createElement('button');btn.type='button';btn.disabled=!valid.includes(id);btn.className=(id===aim?'selected ':'')+(id.startsWith('enemy')?'opponent':'ally');btn.textContent=screenName(id)+(id.endsWith('Mage')&&s.mageMode[id]==='passive'?' · PASSIV':'')+' · '+s.hp[id]+' LP';btn.addEventListener('click',function(){chooseTarget(id)});targets.appendChild(btn)});
  
- el('left').disabled=!player;el('right').disabled=!player;el('confirm').disabled=!player&&s.phase!=='finished';
+ 
  var log=el('log');log.replaceChildren();s.history.slice(-20).forEach(function(x){var li=document.createElement('li');li.textContent='R'+x.round+': '+x.text;log.appendChild(li)})
 }
 function enemyTurn(token){
@@ -170,10 +170,15 @@ function act(){
  if(result.state.phase==='running'&&result.state.turn.startsWith('enemy'))enemyTurn(timer);
  return true
 }
-el('left').addEventListener('click',function(){if(!el('left').disabled)chooseSkill(selected-1)});
-el('right').addEventListener('click',function(){if(!el('right').disabled)chooseSkill(selected+1)});
-el('confirm').addEventListener('click',act);el('start').addEventListener('click',begin);el('restart').addEventListener('click',begin);
-document.addEventListener('keydown',function(e){var k=e.key.toLowerCase();if(k==='arrowleft'){e.preventDefault();if(!el('left').disabled)chooseSkill(selected-1)}if(k==='arrowright'){e.preventDefault();if(!el('right').disabled)chooseSkill(selected+1)}if(k==='enter'||k==='a'){e.preventDefault();act()}if(k==='r'||k==='s'){e.preventDefault();begin()}});
+el('restart').addEventListener('click',begin);
+document.addEventListener('keydown',function(e){
+ var k=e.key.toLowerCase(),state=combat.getState();
+ if(k==='arrowleft'||k==='arrowright'){
+  if(state.phase==='running'&&state.turn&&state.turn.startsWith('player')&&!locked){e.preventDefault();chooseSkill(selected+(k==='arrowleft'?-1:1))}
+ }
+ if(k==='enter'||k==='a'){e.preventDefault();act()}
+ if(k==='r'||k==='s'){e.preventDefault();begin()}
+});
 function ellipse(x,y,rx,ry,color){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
 function actor(x,y,scale,color,ghost,enemy,t,dead){
  if(dead)return;
