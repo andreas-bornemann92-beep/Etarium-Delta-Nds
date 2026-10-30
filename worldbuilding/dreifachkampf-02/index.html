@@ -95,8 +95,8 @@ footer{color:#b5aeb3}
 </section>
 <nav id="controls"><button id="left">◀</button><button id="right">▶</button><button id="confirm">A</button><button id="start">START</button></nav>
 <details><summary>Kampfprotokoll anzeigen</summary><ol id="log"></ol></details>
-<footer>UI-TEST 02 · Anthrazit/Rot · Touch-Steuerung für iPhone<br>3 Geister + 1 Magier pro Team · individuelle Geschwindigkeit · Zielauswahl · LP und Äther<br>Worldbuilding-Testwerte, kein verbindlicher Etarium-Kanon</footer></main>
-<script src="./engine.js?v=1"></script>
+<footer>REFERENZDEMO FÜR KAMPFTESTS · Anthrazit/Rot · iPhone<br>Sieg: gegnerischer Magier K. o. ODER alle drei gegnerischen Geister K. o.<br>3 Geister + 1 Magier pro Team · individuelle Geschwindigkeit · Zielauswahl · LP und Äther<br>Worldbuilding-Testwerte, kein verbindlicher Etarium-Kanon</footer></main>
+<script src="./engine.js?v=canonical-win-1"></script>
 <script>
 (function(){'use strict';
 var combat=window.ETARIUM_TRIPLE_BATTLE.create(),cv=document.getElementById('battle'),ctx=cv.getContext('2d'),IDs=['enemySpirit1','enemySpirit2','enemySpirit3','enemyMage','playerSpirit1','playerSpirit2','playerSpirit3','playerMage'];
@@ -118,7 +118,7 @@ function paint(){
   div.querySelector('.health').style.width=s.hp[id]/combat.hpMax[id]*100+'%';
   div.querySelector('.mana').style.width=s.mana[id]/combat.manaMax[id]*100+'%';
  });
- el('round').textContent='RUNDE '+s.round+' / '+s.maxRounds;
+ el('round').textContent='RUNDE '+s.round;
  el('actor').textContent=s.phase==='finished'?'KAMPF BEENDET':screenName(s.turn)+' am Zug';
  if(s.phase==='finished'){
   el('info').textContent=(s.winner==='player'?'SIEG! Dein Team gewinnt.':s.winner==='enemy'?'NIEDERLAGE. Kael gewinnt.':'UNENTSCHIEDEN.')+' '+s.lastMessage;
