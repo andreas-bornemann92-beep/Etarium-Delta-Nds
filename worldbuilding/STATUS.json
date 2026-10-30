@@ -1,0 +1,22 @@
+{
+  "project": "Etarium",
+  "development_track": "Worldbuilding",
+  "type": "concept_world_and_experimental_elements",
+  "created_at": "2026-10-30",
+  "baseline": "Etarium X",
+  "baseline_commit": "07adfba5f0e2bcf27d3d73c45b8fe272b675e496",
+  "canon": false,
+  "areas": [
+    "Welt",
+    "Stadt",
+    "Titel",
+    "Editor",
+    "NPC",
+    "Dialog",
+    "Gebäude",
+    "Kampf",
+    "Steuerung"
+  ],
+  "next_review": "regelmäßige Rückfrage",
+  "implementation_status": "Konzeptentwürfe und bereits vorhandene Prototypfunktionen getrennt halten"
+}
