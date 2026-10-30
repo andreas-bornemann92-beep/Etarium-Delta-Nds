@@ -6,8 +6,20 @@ function create(options){
  options=options||{};var random=options.random||Math.random,maxRounds=options.maxRounds||10;
  var actors=['playerSpirit','enemySpirit','playerMage','enemyMage'];
  var hpMax={playerSpirit:100,enemySpirit:100,playerMage:70,enemyMage:70};
- var speed={playerSpirit:78,enemySpirit:91,playerMage:64,enemyMage:72};
- function initiativeOrder(){return actors.slice().sort(function(a,b){return speed[b]-speed[a]||actors.indexOf(a)-actors.indexOf(b)})}
+ var speed=Object.assign({playerSpirit:78,enemySpirit:91,playerMage:64,enemyMage:72},options.speed||{});
+ function initiativeOrder(){
+  var ordered=actors.slice().sort(function(a,b){return speed[b]-speed[a]});
+  for(var first=0;first<ordered.length;){
+   var last=first+1;
+   while(last<ordered.length&&speed[ordered[last]]===speed[ordered[first]])last++;
+   for(var i=last-1;i>first;i--){
+    var j=first+roll(i-first+1),temp=ordered[i];
+    ordered[i]=ordered[j];ordered[j]=temp;
+   }
+   first=last;
+  }
+  return ordered
+ }
  var names={playerSpirit:'Dein Geist',enemySpirit:'Kaels Geist',playerMage:'Dein Magier',enemyMage:'Magier Kael'};
  var moves={
  playerSpirit:[{key:'attack',name:'Angriff',damage:16},{key:'magic',name:'Lichtfunken',damage:22},{key:'guard',name:'Schutz',shield:12}],
@@ -43,7 +55,7 @@ function create(options){
      var a=state.hp.playerSpirit+state.hp.playerMage,b=state.hp.enemySpirit+state.hp.enemyMage;
      state.winner=a===b?'draw':a>b?'player':'enemy';state.phase='finished';state.turn=null;return
     }
-    state.round++;state.acted=[];
+    state.round++;state.acted=[];state.order=initiativeOrder();
    }
    var id=state.order[state.acted.length];
    if(alive(id)){state.turn=id;return}
