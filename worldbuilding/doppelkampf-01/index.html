@@ -38,14 +38,14 @@ footer{text-align:center;margin-top:12px;font-size:11px;color:#9fb2be;line-heigh
 <div id="sequence" aria-label="Reihenfolge nach Geschwindigkeit"></div>
 <section id="ui"><div id="turnline"><span id="round">RUNDE 1</span><span id="actor"></span></div>
 <div id="info" aria-live="polite">Doppelkampf beginnt.</div>
-<div id="skills" aria-label="Aktionswahl"></div><div id="labeltargets">Ziel auswählen</div>
+<div id="skills" aria-label="Aktionswahl"></div><div id="labeltargets">Ziel antippen = Aktion ausführen (oder A drücken)</div>
 <div id="targets" aria-label="Alle sechs möglichen Ziele"></div>
 <div id="wait" hidden>Der Gegner führt seinen Zug aus …</div><button id="restart" hidden>Kampf neu starten</button>
 </section>
 <nav id="controls"><button id="left">◀</button><button id="right">▶</button><button id="confirm">A</button><button id="start">START</button></nav>
 <details><summary>Kampfprotokoll anzeigen</summary><ol id="log"></ol></details>
 <footer>2 Geister + 1 Magier pro Team · individuelle Geschwindigkeit · Zielauswahl · LP und Äther<br>Worldbuilding-Testwerte, kein verbindlicher Etarium-Kanon</footer></main>
-<script src="./engine.js?v=1"></script>
+<script src="./engine.js?v=2"></script>
 <script>
 (function(){'use strict';
 var combat=window.ETARIUM_DOUBLE_BATTLE.create(),cv=document.getElementById('battle'),ctx=cv.getContext('2d'),IDs=['enemySpirit1','enemySpirit2','enemyMage','playerSpirit1','playerSpirit2','playerMage'];
@@ -57,7 +57,7 @@ IDs.forEach(card);
 function actionOptions(){var s=combat.getState();return s.turn&&s.turn.startsWith('player')?combat.available(s.turn):[]}
 function validTargets(){var s=combat.getState(),m=actionOptions()[selected];return m?combat.targets(s.turn,m.key):[]}
 function chooseSkill(n){var opts=actionOptions();selected=(n+opts.length)%opts.length;if(!opts.length)return;aim=validTargets()[0]||null;paint()}
-function chooseTarget(t){if(!validTargets().includes(t))return false;aim=t;paint();return true}
+function chooseTarget(t){if(!validTargets().includes(t))return false;aim=t;act();return true}
 function paint(){
  var s=combat.getState(),player=s.phase==='running'&&s.turn&&s.turn.startsWith('player')&&!locked;
  IDs.forEach(function(id){
@@ -71,7 +71,7 @@ function paint(){
  el('actor').textContent=s.phase==='finished'?'KAMPF BEENDET':screenName(s.turn)+' am Zug';
  if(s.phase==='finished'){
   el('info').textContent=(s.winner==='player'?'SIEG! Dein Team gewinnt.':s.winner==='enemy'?'NIEDERLAGE. Kael gewinnt.':'UNENTSCHIEDEN.')+' '+s.lastMessage;
- }else el('info').textContent=s.lastMessage+(player?' Wähle eine Aktion und ein zulässiges Ziel.':'');
+ }else el('info').textContent=s.lastMessage+(player?' Wähle eine Aktion und tippe auf das Ziel – der Zug wird sofort ausgeführt. Alternativ mit A bestätigen.':'');
  el('wait').hidden=s.phase!=='running'||!s.turn||!s.turn.startsWith('enemy');
  el('restart').hidden=s.phase!=='finished';
  skills.hidden=!player;targets.hidden=!player;el('labeltargets').hidden=!player;
