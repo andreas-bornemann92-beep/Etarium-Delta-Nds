@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827"><title>Etarium – Eigenständige Kampfsimulation</title>
+<style>
+:root{color-scheme:dark;--bg:#111826;--panel:#1c2937;--rim:#af6372;--gold:#e8cda1;--text:#f6eee1}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#24394b 0%,#101622 70%);color:var(--text);font:15px system-ui,-apple-system,sans-serif}
+main{max-width:700px;padding:14px 12px 30px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid #9d6570;padding:6px 4px 12px;margin-bottom:14px}
+h1{font:700 clamp(22px,6vw,30px) Georgia,serif;letter-spacing:.16em;margin:0;color:#efb8c0}
+header small{color:#d9c4a9;letter-spacing:.07em;font-size:11px;text-align:right}
+#frame{border:3px solid var(--rim);border-radius:17px;overflow:hidden;box-shadow:0 12px 38px #0009;position:relative;background:#6eab9c;aspect-ratio:4/3}
+#scene{width:100%;height:100%;display:block;image-rendering:auto}
+#panel{margin-top:12px;border:2px solid #805563;border-radius:13px;background:linear-gradient(#263342,#182332);padding:14px;min-height:200px;box-shadow:inset 0 1px #69839a66}
+#headline{font:700 19px Georgia,serif;color:var(--gold);margin-bottom:9px}
+#message{line-height:1.55;color:#f3ede4;min-height:45px;margin-bottom:12px}
+#moves{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+#moves button,#next,#restart{appearance:none;min-height:58px;border-radius:10px;color:#fff6e9;background:#394b5b;border:1px solid #8492a1;font:700 15px system-ui;cursor:pointer;padding:8px}
+#moves button:focus-visible,#next:focus-visible,#restart:focus-visible{outline:3px solid #efbf79;outline-offset:2px}
+#moves button:active,#next:active,#restart:active,.selected{background:#85485b!important}
+#next,#restart{width:100%;background:#883c55;border-color:#c17f8c}
+#next[hidden],#restart[hidden],#moves[hidden]{display:none}
+#detail{margin-top:12px;display:flex;justify-content:space-between;gap:10px;color:#aebdcb;font-size:12px}
+#instruction{font-size:13px;color:#cbbba7;text-align:center;line-height:1.65;margin-top:16px}
+#tiny{font-size:11px;color:#96a9b4;text-align:center;margin-top:7px}
+@media(max-width:400px){#moves button{font-size:13px;min-height:64px}header small{font-size:10px}#panel{padding:11px}}
+</style></head>
+<body><main><header><h1>ETARIUM</h1><small>KAMPFSIMULATION<br>WORLDBUILDING · DEMO 01</small></header>
+<section aria-label="Kampfbildschirm" id="frame"><canvas id="scene" width="512" height="384"></canvas></section>
+<section id="panel" aria-live="polite">
+<div id="headline"></div><div id="message"></div>
+<div id="moves" aria-label="Kampfaktionen">
+<button data-move="angriff">⚔ Angriff</button>
+<button data-move="magie">✦ Magie</button>
+<button data-move="schutz">◆ Schutz</button>
+</div>
+<button id="next" hidden>Weiter zu Runde 2</button>
+<button id="restart" hidden>Erneut kämpfen</button>
+<div id="detail"><span id="round"></span><span id="lp"></span></div>
+</section>
+<div id="instruction">Steuerung: ◀ ▶ Aktion wählen · A / Enter bestätigen · B / Escape zurück zur Auswahl · START Neustart</div>
+<div id="tiny">Eigenständiger Prototyp – 2 Runden, Kael kontert automatisch. Kein endgültiges Balancing.</div>
+</main>
+<script src="../x/battle.js?v=demo1"></script>
+<script>
+(function(){
+'use strict';
+var engine=window.ETARIUM_BATTLE,canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+var headline=document.getElementById('headline'),message=document.getElementById('message'),moves=document.getElementById('moves'),next=document.getElementById('next'),restart=document.getElementById('restart'),round=document.getElementById('round'),lp=document.getElementById('lp');
+var buttons=Array.from(document.querySelectorAll('[data-move]')),selected=0,phase='choice',actionsTaken=0;
+function select(i){selected=(i+buttons.length)%buttons.length;buttons.forEach(function(b,j){b.classList.toggle('selected',selected===j)})}
+function status(){var c=engine.getState();round.textContent='Runde '+Math.min(c.round,2)+' von 2';lp.textContent='LP '+c.playerHP+' · Gegner '+c.enemyHP}
+function begin(){
+ engine.enter('Kael',performance.now());phase='choice';actionsTaken=0;select(0);
+ headline.textContent='Kael fordert dich heraus';message.textContent='Der Trainingskampf beginnt sofort. Wähle deine erste Aktion.';
+ moves.hidden=false;next.hidden=true;restart.hidden=true;status()
+}
+function choose(key){
+ if(phase!=='choice')return false;
+ var result=engine.act(key);if(!result)return false;
+ actionsTaken++;
+ message.textContent=result.action+' '+result.counter;
+ moves.hidden=true;status();
+ if(result.finished){
+  phase='victory';engine.leave();
+  headline.textContent='SIEG! · Trainingskampf beendet';
+  message.textContent='Du gewinnst nach zwei Runden. '+result.action+' '+result.counter;
+  restart.hidden=false;next.hidden=true;
+ }else{
+  phase='counter';headline.textContent='Kael kontert · Runde 1';next.hidden=false;
+ }
+ return true
+}
+function advance(){if(phase!=='counter')return false;engine.next();phase='choice';headline.textContent='Runde 2 · Dein Zug';message.textContent='Kael wartet. Wähle deine zweite Aktion.';moves.hidden=false;next.hidden=true;status();return true}
+function confirm(){if(phase==='choice')choose(buttons[selected].dataset.move);else if(phase==='counter')advance();else if(phase==='victory')begin()}
+buttons.forEach(function(b,i){b.addEventListener('click',function(){select(i);choose(b.dataset.move)})});
+next.addEventListener('click',advance);restart.addEventListener('click',begin);
+document.addEventListener('keydown',function(e){
+ var k=e.key;
+ if(k==='ArrowLeft'||k==='ArrowUp'){e.preventDefault();if(phase==='choice')select(selected-1)}
+ if(k==='ArrowRight'||k==='ArrowDown'){e.preventDefault();if(phase==='choice')select(selected+1)}
+ if(k==='Enter'||k===' '||k.toLowerCase()==='a'){e.preventDefault();confirm()}
+ if(k==='Escape'||k.toLowerCase()==='b'){if(phase==='counter'){e.preventDefault();phase='choice';moves.hidden=false;next.hidden=true;headline.textContent='Runde 1 · Ergebnis';message.textContent='Die erste Aktion wurde bereits ausgeführt. Drücke Weiter, um Runde 2 zu beginnen.';phase='counter';moves.hidden=true;next.hidden=false}}
+ if(k.toLowerCase()==='s')begin()
+});
+function render(t){engine.draw(ctx,512,384,t);requestAnimationFrame(render)}
+window.etariumBattleDemo={reset:begin,choose:choose,advance:advance,getState:function(){return {phase:phase,actionsTaken:actionsTaken,battle:engine.getState()}}};
+begin();requestAnimationFrame(render)
+})();
+</script></body></html>
