@@ -1,0 +1,5 @@
+const CACHE_NAME = "etarium-iphone-v1-pwa-20261108-02-kompakt";
+const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./title.webp", "./menu.webp", "./character.webp", "./name_m.webp", "./name_f.webp", "./difficulty.webp", "./confirm_m.webp", "./confirm_f.webp", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
+self.addEventListener('install', event => {event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));});
+self.addEventListener('activate', event => {event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('etarium-iphone-') && k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));});
+self.addEventListener('fetch', event => {if(event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return; event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));});
