@@ -10,7 +10,7 @@
 .hit.selected.flash::after,.hit.selected:active::after{animation:etarium-frame-flash .27s ease-out both}
 @keyframes etarium-frame-flash{0%{opacity:0;filter:brightness(1)}24%{opacity:1;filter:brightness(1.3)}68%{opacity:.94;filter:brightness(1.06)}100%{opacity:0;filter:brightness(1)}}
 @keyframes etarium-fill-flash{0%,100%{opacity:0}30%{opacity:1}}
-50%{opacity:1}}
+
 @media(prefers-reduced-motion:reduce){.hit.selected::after{animation:none}.hit.flash::after,.hit:active:not(:disabled)::after{animation:none;opacity:1}.hit.flash::before,.hit:active:not(:disabled)::before{animation:none;opacity:.35}}
 .display-name{position:absolute;left:22%;top:40.4%;width:55%;height:4.2%;display:flex;align-items:center;padding-left:1.2%;font-size:clamp(10px,4.3vw,29px);font-weight:bold;color:#fff6dd;text-shadow:0 1px 4px #000;background:linear-gradient(90deg,#061321 85%,#091727);border-radius:4px;pointer-events:none;white-space:nowrap;overflow:hidden}.display-count{position:absolute;left:72%;top:41.8%;width:10%;font-size:clamp(7px,2.5vw,16px);color:#ffe8a0;text-align:right;pointer-events:none}.confirm-name{position:absolute;left:54%;top:42.3%;width:37%;height:3.1%;background:#081523;display:grid;place-items:center;color:#fff2d3;font-size:clamp(11px,3.6vw,27px);font-weight:bold;pointer-events:none;text-shadow:0 1px 3px #000}.confirm-difficulty{position:absolute;left:51%;top:53%;width:43%;height:11.1%;border:2px solid #dba84c;border-radius:6%;background:linear-gradient(160deg,#091629,#07111e);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff0cb;pointer-events:none;overflow:hidden}.confirm-difficulty img{width:100%;height:100%;object-fit:cover;opacity:.8}.confirm-difficulty span{position:absolute;bottom:2%;font-size:clamp(11px,3.3vw,26px);font-weight:bold;text-shadow:0 2px 4px black,0 0 7px black;background:#07111edb;border-radius:20px;padding:0 12px}.toast{position:absolute;left:10%;top:72%;width:80%;padding:2%;text-align:center;background:#061528ed;border:1px solid #e9bd65;border-radius:10px;color:#ffe8af;font-size:clamp(11px,3.2vw,22px);box-shadow:0 0 15px #000;z-index:10}.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media (min-width:650px){.display-name{font-size:27px}.display-count{font-size:17px}.confirm-name,.confirm-difficulty span{font-size:24px}}
 
@@ -42,6 +42,19 @@
 
 .hit[data-glow].flash::after{animation:etarium-image-glow .25s ease-out both}
 @keyframes etarium-image-glow{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
+
+/* ETARIUM V2 – iPhone screen stability; technical test only */
+html,body{min-height:100%;min-height:100dvh;overscroll-behavior:none}
+body{height:100dvh;min-height:0;overflow:hidden}
+#stage{max-width:100%;max-height:100%;flex-shrink:0;contain:layout paint}
+#art{image-rendering:auto;-webkit-user-drag:none}
+.hit{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.hit.selected:not(:disabled){background:transparent;box-shadow:none}
+.hit.selected:not(:disabled)::before,.hit.selected:not(:disabled)::after{opacity:0;animation:none}
+.hit.selected.flash:not(:disabled),.hit.selected:active:not(:disabled){background:transparent;box-shadow:none}
+.hit.selected.flash:not(:disabled)::after,.hit.selected:active:not(:disabled)::after{animation:etarium-frame-flash .27s ease-out both}
+.hit.selected.flash:not(:disabled)::before,.hit.selected:active:not(:disabled)::before{animation:etarium-fill-flash .27s ease-out both}
+@media(prefers-reduced-motion:reduce){.hit.selected.flash:not(:disabled)::after,.hit.selected:active:not(:disabled)::after{animation:none;opacity:1}}
 </style></head><body><main id="stage" aria-label="ETARIUM Startbildschirm"><img id="art" alt="ETARIUM-Bildschirmgrafik"><div id="hits"></div><div id="live" class="sr-only" aria-live="polite"></div></main><script>
 'use strict';
 const images={title:'title.png',menu:'menu.png',character:'character.png',name_m:'name_m.png',name_f:'name_f.png',difficulty:'difficulty.png',confirm_m:'confirm_m.png',confirm_f:'confirm_f.png'};
