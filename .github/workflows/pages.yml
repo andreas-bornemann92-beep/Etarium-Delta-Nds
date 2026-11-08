@@ -1,0 +1,33 @@
+name: ETARIUM iPhone PWA Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify complete iPhone PWA before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in index.html manifest.webmanifest service-worker.js title.webp menu.webp character.webp name_m.webp name_f.webp difficulty.webp confirm_m.webp confirm_f.webp icons/icon-192.png icons/icon-512.png; do
+            test -s "$f" || { echo "::error::Missing PWA file: $f"; exit 1; }
+          done
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
