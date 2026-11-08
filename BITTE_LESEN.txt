@@ -1,0 +1,9 @@
+ETARIUM iPhone-Testdemo – repariertes Paket
+
+1. ZIP in der Dateien-App vollständig entpacken.
+2. Die Datei index.html aus dem entpackten Ordner in einem HTML-fähigen Viewer/Browser öffnen.
+3. Alle PNG-Dateien müssen im selben Ordner wie index.html bleiben.
+
+Die alte Ein-Datei-Fassung war ca. 28 MB groß. Diese Fassung verteilt die Bilder auf separate Dateien. Die Bildschirme, Bedienlogik und die Gold-Effekte sind aus dem letzten Teststand übernommen.
+
+Wichtig: Das Öffnen lokaler HTML-Dateien kann auf iOS je nach App eingeschränkt sein. Eine echte iPhone-Funktionsprüfung wurde nicht durchgeführt. Keine Kanonfreigabe.
