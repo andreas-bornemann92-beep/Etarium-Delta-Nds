@@ -1,0 +1,52 @@
+name: ETARIUM iPhone V2 screen test
+on:
+  push:
+    branches: [test/iphone-bildschirmoptimierung-v2]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: test/iphone-bildschirmoptimierung-v2
+      - name: Apply non-destructive screen CSS
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='/* ETARIUM V2 – iPhone screen stability; technical test only */'
+          if marker in s:
+              print('Already patched')
+              raise SystemExit(0)
+          anchor='</style></head><body>'
+          assert anchor in s, 'Expected HTML anchor not found'
+          s=s.replace('50%{opacity:1}}','')
+          css="""
+          /* ETARIUM V2 – iPhone screen stability; technical test only */
+          html,body{min-height:100%;min-height:100dvh;overscroll-behavior:none}
+          body{height:100dvh;min-height:0;overflow:hidden}
+          #stage{max-width:100%;max-height:100%;flex-shrink:0;contain:layout paint}
+          #art{image-rendering:auto;-webkit-user-drag:none}
+          .hit{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+          .hit.selected:not(:disabled){background:transparent;box-shadow:none}
+          .hit.selected:not(:disabled)::before,.hit.selected:not(:disabled)::after{opacity:0;animation:none}
+          .hit.selected.flash:not(:disabled),.hit.selected:active:not(:disabled){background:transparent;box-shadow:none}
+          .hit.selected.flash:not(:disabled)::after,.hit.selected:active:not(:disabled)::after{animation:etarium-frame-flash .27s ease-out both}
+          .hit.selected.flash:not(:disabled)::before,.hit.selected:active:not(:disabled)::before{animation:etarium-fill-flash .27s ease-out both}
+          @media(prefers-reduced-motion:reduce){.hit.selected.flash:not(:disabled)::after,.hit.selected:active:not(:disabled)::after{animation:none;opacity:1}}
+          """
+          p.write_text(s.replace(anchor,css+anchor),encoding='utf-8')
+          PY
+      - name: Commit updated HTML only if changed
+        run: |
+          if ! git diff --quiet -- index.html; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "Apply iPhone V2 screen CSS test"
+            git push origin HEAD:test/iphone-bildschirmoptimierung-v2
+          fi
